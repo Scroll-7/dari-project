@@ -79,7 +79,7 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Text style={styles.footerText}>Don&apos;t have an account? </Text>
           <TouchableOpacity>
             <Text style={styles.signupText}>Sign up</Text>
           </TouchableOpacity>
