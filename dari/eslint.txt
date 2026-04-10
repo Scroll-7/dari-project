@@ -1,0 +1,6 @@
+
+C:\Users\aziza\.gemini\antigravity\scratch\dari\src\screens\LoginScreen.js
+  82:46  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+✖ 1 problem (1 error, 0 warnings)
+
