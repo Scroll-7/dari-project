@@ -1,55 +1,50 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { StyleSheet, Platform } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import LoginScreen from '../screens/LoginScreen';
-import HomeScreen from '../screens/HomeScreen';
-import RoommatesScreen from '../screens/RoommatesScreen';
-import ServicesScreen from '../screens/ServicesScreen';
-import InboxScreen from '../screens/InboxScreen';
-import { COLORS } from '../constants/theme';
+import ApartmentsScreen from "../screens/ApartmentsScreen";
+import HomeScreen from "../screens/HomeScreen";
+import HousesScreen from "../screens/HousesScreen";
+import InboxScreen from "../screens/InboxScreen";
+import ProfileScreen from "../screens/ProfileScreen";
+import PropertyDetailScreen from "../screens/PropertyDetailScreen";
+import RoommatesScreen from "../screens/RoommatesScreen";
+import SearchScreen from "../screens/SearchScreen";
+import ServicesScreen from "../screens/ServicesScreen";
 
-const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 
-function BottomTabNavigator() {
+// Bottom tab bar (Home + Roommates + Inbox + Services)
+function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarActiveTintColor: COLORS.primary || '#4B5BF5',
-        tabBarInactiveTintColor: '#aaa',
+        tabBarActiveTintColor: "#4461F2",
+        tabBarInactiveTintColor: "#999",
         tabBarStyle: {
-          position: 'absolute',
-          borderTopWidth: 0,
-          elevation: 0,
-          backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#fff',
+          backgroundColor: "#fff",
+          borderTopWidth: 1,
+          borderTopColor: "#f0f0f0",
+          height: 64,
+          paddingBottom: 10,
+          paddingTop: 8,
         },
-        tabBarBackground: () =>
-          Platform.OS === 'ios' ? (
-            <BlurView
-              tint="light"
-              intensity={80}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : null,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "500" },
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Roommates') {
-            iconName = focused ? 'people' : 'people-outline';
-          } else if (route.name === 'Inbox') {
-            iconName = focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline';
-          } else if (route.name === 'Services') {
-            iconName = focused ? 'construct' : 'construct-outline';
-          }
-          return <Ionicons name={iconName} size={size} color={color} />;
+          if (route.name === "Home")
+            iconName = focused ? "home" : "home-outline";
+          else if (route.name === "Roommates")
+            iconName = focused ? "people" : "people-outline";
+          else if (route.name === "Inbox")
+            iconName = focused ? "chatbubble" : "chatbubble-outline";
+          else if (route.name === "Services")
+            iconName = focused ? "construct" : "construct-outline";
+          return <Ionicons name={iconName} size={22} color={color} />;
         },
       })}
     >
@@ -59,7 +54,8 @@ function BottomTabNavigator() {
         name="Inbox"
         component={InboxScreen}
         options={{
-          tabBarBadge: 3, // remove this line once you wire up real unread count
+          tabBarBadge: 3,
+          tabBarBadgeStyle: { backgroundColor: "#4461F2", fontSize: 10 },
         }}
       />
       <Tab.Screen name="Services" component={ServicesScreen} />
@@ -67,21 +63,18 @@ function BottomTabNavigator() {
   );
 }
 
+// Root stack: tabs + screens that push on top (no bottom bar)
 export default function AppNavigator() {
-  // Replace this with your real auth logic (e.g. check AsyncStorage token)
-  const isLoggedIn = true;
-
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isLoggedIn ? (
-          <Stack.Screen name="Main" component={BottomTabNavigator} />
-        ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        )}
+        <Stack.Screen name="Main" component={MainTabs} />
+        <Stack.Screen name="Search" component={SearchScreen} />
+        <Stack.Screen name="Apartments" component={ApartmentsScreen} />
+        <Stack.Screen name="Houses" component={HousesScreen} />
+        <Stack.Screen name="PropertyDetail" component={PropertyDetailScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({});

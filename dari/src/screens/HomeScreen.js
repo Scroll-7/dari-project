@@ -10,7 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { COLORS, FONTS, SHADOWS, SIZES } from "../constants/theme";
+import { COLORS } from "../constants/theme";
+
+// ✅ (OPTIONAL) if you have mockData file
+// import { PROPERTIES } from "../constants/mockData";
 
 const CATEGORIES = [
   { id: "1", title: "Apartments", icon: "business-outline" },
@@ -38,7 +41,8 @@ const FEATURED_PROPERTIES = [
   },
 ];
 
-export default function HomeScreen() {
+// ✅ IMPORTANT: add navigation here
+export default function HomeScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -51,7 +55,12 @@ export default function HomeScreen() {
             <Text style={styles.greeting}>Good morning,</Text>
             <Text style={styles.userName}>Discover your next home</Text>
           </View>
-          <TouchableOpacity style={styles.profileBtn}>
+
+          {/* ✅ Profile navigation */}
+          <TouchableOpacity
+            style={styles.profileBtn}
+            onPress={() => navigation.navigate("Profile")}
+          >
             <Image
               source={{
                 uri: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100",
@@ -62,42 +71,57 @@ export default function HomeScreen() {
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons
-            name="search"
-            size={20}
-            color={COLORS.textLight}
-            style={styles.searchIcon}
-          />
-          <TextInput
-            placeholder="Search city, neighborhood, or address"
-            style={styles.searchInput}
-            placeholderTextColor={COLORS.textLight}
-          />
-          <TouchableOpacity style={styles.filterBtn}>
-            <LinearGradient
-              colors={[COLORS.primary, COLORS.secondary]}
-              style={styles.filterGradient}
-            >
-              <Ionicons name="options" size={20} color={COLORS.white} />
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={() => navigation.navigate("Search")}>
+          <View style={styles.searchContainer}>
+            <Ionicons
+              name="search"
+              size={20}
+              color={COLORS.textLight}
+              style={styles.searchIcon}
+            />
+
+            {/* ✅ Navigate when user clicks input */}
+            <TextInput
+              placeholder="Search city, neighborhood, or address"
+              style={styles.searchInput}
+              placeholderTextColor={COLORS.textLight}
+              onFocus={() => navigation.navigate("Search")}
+            />
+
+            <TouchableOpacity style={styles.filterBtn}>
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.secondary]}
+                style={styles.filterGradient}
+              >
+                <Ionicons name="options" size={20} color={COLORS.white} />
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
 
         {/* Categories */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Categories</Text>
-          <TouchableOpacity>
+
+          {/* ✅ See All */}
+          <TouchableOpacity onPress={() => navigation.navigate("Search")}>
             <Text style={styles.seeAll}>See All</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoriesScroll}
-        >
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {CATEGORIES.map((cat) => (
-            <TouchableOpacity key={cat.id} style={styles.categoryCard}>
+            <TouchableOpacity
+              key={cat.id}
+              style={styles.categoryCard}
+              onPress={() => {
+                if (cat.title === "Apartments") {
+                  navigation.navigate("Apartments");
+                } else if (cat.title === "Houses") {
+                  navigation.navigate("Houses");
+                }
+              }}
+            >
               <View style={styles.categoryIconContainer}>
                 <Ionicons name={cat.icon} size={24} color={COLORS.primary} />
               </View>
@@ -109,13 +133,23 @@ export default function HomeScreen() {
         {/* Featured Properties */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Featured Properties</Text>
-          <TouchableOpacity>
+
+          {/* ✅ See All */}
+          <TouchableOpacity onPress={() => navigation.navigate("Search")}>
             <Text style={styles.seeAll}>See All</Text>
           </TouchableOpacity>
         </View>
+
         {FEATURED_PROPERTIES.map((prop) => (
-          <TouchableOpacity key={prop.id} style={styles.propertyCard}>
+          <TouchableOpacity
+            key={prop.id}
+            style={styles.propertyCard}
+            onPress={() =>
+              navigation.navigate("PropertyDetail", { property: prop })
+            }
+          >
             <Image source={{ uri: prop.image }} style={styles.propertyImage} />
+
             <LinearGradient
               colors={["transparent", "rgba(0,0,0,0.8)"]}
               style={styles.propertyGradient}
@@ -131,6 +165,7 @@ export default function HomeScreen() {
                   {prop.location}
                 </Text>
               </View>
+
               <View style={styles.priceTag}>
                 <Text style={styles.priceText}>{prop.price}/mo</Text>
               </View>
@@ -141,88 +176,101 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  scrollContent: { padding: SIZES.medium, paddingBottom: 100 },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  scrollContent: {
+    padding: 16,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: SIZES.medium,
-    marginBottom: SIZES.xl,
+    marginBottom: 20,
   },
-  greeting: { ...FONTS.body1, color: COLORS.textLight },
-  userName: { ...FONTS.h2, color: COLORS.text, marginTop: 4 },
-  profileBtn: { ...SHADOWS.medium },
-  profileImg: { width: 50, height: 50, borderRadius: 25 },
+  greeting: {
+    fontSize: 14,
+    color: "gray",
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  profileImg: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    paddingHorizontal: SIZES.small,
-    paddingVertical: 6,
-    ...SHADOWS.light,
-    marginBottom: SIZES.xl,
+    backgroundColor: "#f2f2f2",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 20,
   },
-  searchIcon: { paddingHorizontal: SIZES.small },
-  searchInput: { flex: 1, height: 40, ...FONTS.body1 },
-  filterBtn: { borderRadius: 12, overflow: "hidden", marginLeft: SIZES.small },
-  filterGradient: {
-    padding: 12,
-    justifyContent: "center",
-    alignItems: "center",
+  searchInput: {
+    flex: 1,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SIZES.medium,
+    marginBottom: 10,
   },
-  sectionTitle: { ...FONTS.h3, color: COLORS.text },
-  seeAll: { ...FONTS.body2, color: COLORS.primary },
-  categoriesScroll: { marginBottom: SIZES.xl },
-  categoryCard: { alignItems: "center", marginRight: SIZES.large },
+  sectionTitle: {
+    fontWeight: "bold",
+  },
+  seeAll: {
+    color: "blue",
+  },
+  categoryCard: {
+    alignItems: "center",
+    marginRight: 15,
+  },
   categoryIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.white,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: "center",
     alignItems: "center",
-    ...SHADOWS.light,
-    marginBottom: SIZES.small,
+    backgroundColor: "#fff",
   },
-  categoryText: { ...FONTS.body2, color: COLORS.text },
+  categoryText: {
+    marginTop: 5,
+  },
   propertyCard: {
-    width: "100%",
     height: 200,
-    borderRadius: 20,
+    borderRadius: 15,
     overflow: "hidden",
-    marginBottom: SIZES.medium,
-    ...SHADOWS.medium,
+    marginBottom: 15,
   },
-  propertyImage: { width: "100%", height: "100%" },
+  propertyImage: {
+    width: "100%",
+    height: "100%",
+  },
   propertyGradient: {
     position: "absolute",
     bottom: 0,
-    left: 0,
-    right: 0,
-    height: "50%",
-    padding: SIZES.medium,
+    width: "100%",
+    padding: 10,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
   },
-  propertyInfo: { flex: 1 },
-  propertyTitle: { ...FONTS.h3, color: COLORS.white, marginBottom: 4 },
-  propertyLocation: { ...FONTS.body2, color: COLORS.white, opacity: 0.8 },
+  propertyTitle: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  propertyLocation: {
+    color: "#fff",
+  },
   priceTag: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    backgroundColor: "blue",
+    padding: 5,
+    borderRadius: 8,
   },
-  priceText: { ...FONTS.body2, color: COLORS.white, fontWeight: "bold" },
+  priceText: {
+    color: "#fff",
+  },
 });
