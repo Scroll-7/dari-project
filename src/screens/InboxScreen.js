@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigation } from "@react-navigation/native";
+import { useConversations } from "../context/ConversationContext";
 import {
     FlatList,
     SafeAreaView,
@@ -123,11 +125,34 @@ const UnreadBadge = ({ count }) => (
   </View>
 );
 
-const BinomeTag = () => (
-  <View style={styles.binomeTag}>
-    <Text style={styles.binomeTagText}>BINOME</Text>
-  </View>
-);
+// ── Context Tag ─────────────────────────────────────────────────────────────
+// Resolves a colored pill label from a chat item's type & isBinome fields.
+
+const CONTEXT_TAG_CONFIG = {
+  'binome-actuel':   { label: 'Binôme actuel',     bg: '#E1F5EE', color: '#0F6E56' },
+  'demande-binome':  { label: 'Demande de binôme', bg: '#EEF0FF', color: '#4B5BF5' },
+  'service':         { label: 'Service',            bg: '#FFF3E0', color: '#E65100' },
+  'property':        { label: 'Propriété',          bg: '#E8F4FD', color: '#0077B6' },
+};
+
+function resolveTag(item) {
+  if (item.isBinome)                    return 'binome-actuel';
+  if (item.type === 'service' || item.tag === 'service') return 'service';
+  if (item.type === 'roommate')          return 'demande-binome';
+  if (item.type === 'property')          return 'property';
+  return null;
+}
+
+const ContextTag = ({ item }) => {
+  const key = resolveTag(item);
+  if (!key) return null;
+  const { label, bg, color } = CONTEXT_TAG_CONFIG[key];
+  return (
+    <View style={[styles.contextTag, { backgroundColor: bg }]}>
+      <Text style={[styles.contextTagText, { color }]}>{label}</Text>
+    </View>
+  );
+};
 
 // ── Binome Request Card ──────────────────────────────────────────────────────
 
@@ -175,7 +200,7 @@ const ChatRow = ({ item, onPress }) => (
     <View style={styles.avatarWrapper}>
       <Avatar
         initials={item.initials}
-        color={item.color}
+        color={item.color ?? item.avatarColor}
         bgColor={item.bgColor}
         size={46}
       />
@@ -184,8 +209,8 @@ const ChatRow = ({ item, onPress }) => (
     <View style={styles.chatInfo}>
       <View style={styles.chatRowTop}>
         <View style={styles.chatNameRow}>
-          <Text style={styles.chatName}>{item.name}</Text>
-          {item.isBinome && <BinomeTag />}
+          <Text style={styles.chatName} numberOfLines={1}>{item.name}</Text>
+          <ContextTag item={item} />
         </View>
         <Text style={styles.chatTime}>{item.time}</Text>
       </View>
@@ -203,26 +228,47 @@ const ChatRow = ({ item, onPress }) => (
 // ── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function InboxScreen() {
+  const navigation = useNavigation();
+  const { conversations } = useConversations();
   const [activeFilter, setActiveFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [requests, setRequests] = useState(BINOME_REQUESTS);
 
   const handleAccept = (id) => {
     setRequests((prev) => prev.filter((r) => r.id !== id));
-    // TODO: update state / call API
   };
 
   const handleDecline = (id) => {
     setRequests((prev) => prev.filter((r) => r.id !== id));
-    // TODO: update state / call API
   };
 
   const handleChatPress = (chat) => {
-    // TODO: navigate to ChatDetailScreen
-    console.log("Open chat:", chat.name);
+    navigation.navigate("Chat", { personId: chat.personId ?? chat.id });
   };
 
-  const filteredChats = CHATS.filter((c) => {
+  // Merge mock CHATS with live conversations from context
+  // Context convs take priority (they're real). Mock ones fill in the rest.
+  const contextIds = new Set(conversations.map((c) => c.personId));
+  const mockAsConv = CHATS
+    .filter((c) => !contextIds.has(c.id))
+    .map((c) => ({
+      ...c,
+      personId: c.id,
+      avatarColor: c.color,
+      bgColor: c.bgColor,
+    }));
+
+  const allChats = [
+    ...conversations.map((c) => ({
+      ...c,
+      time: new Date(c.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      type: c.tag === 'roommate' ? 'roommate' : 'service',
+      isBinome: false,
+    })),
+    ...mockAsConv,
+  ];
+
+  const filteredChats = allChats.filter((c) => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
     if (activeFilter === "Roommate Requests") return c.type === "roommate";
@@ -313,12 +359,12 @@ export default function InboxScreen() {
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 
-const ACCENT = "#4B5BF5";
+const ACCENT = "#4F46E5";
 
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#F5F4F0",
+    backgroundColor: "#F9FAFB",
   },
 
   // Header
@@ -328,8 +374,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 10,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
   headerTitle: {
     fontSize: 26,
@@ -357,11 +405,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     marginHorizontal: 16,
     marginVertical: 10,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   searchIcon: {
     fontSize: 14,
@@ -386,10 +439,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   filterTab: {
-    paddingVertical: 6,
+    paddingVertical: 7,
     paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: "#f0f0f0",
+    borderRadius: 999,
+    backgroundColor: "#F3F4F6",
     marginRight: 8,
   },
   filterTabActive: {
@@ -397,8 +450,8 @@ const styles = StyleSheet.create({
   },
   filterTabText: {
     fontSize: 13,
-    fontWeight: "500",
-    color: "#555",
+    fontWeight: "600",
+    color: "#6B7280",
   },
   filterTabTextActive: {
     color: "#fff",
@@ -557,17 +610,18 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  // Binome tag
-  binomeTag: {
-    backgroundColor: "#E1F5EE",
+  // Context tag (replaces old binomeTag)
+  contextTag: {
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
+    flexShrink: 0,
   },
-  binomeTagText: {
+  contextTagText: {
     fontSize: 9,
-    fontWeight: "700",
-    color: "#0F6E56",
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
 
   // Unread badge
