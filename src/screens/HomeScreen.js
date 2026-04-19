@@ -36,7 +36,7 @@ const FEATURED_PROPERTIES = [
     price: "2 500 DT/mois",
     location: "Banlieue",
     beds: 3, baths: 2,
-    image: "https://images.unsplash.com/photo-1502672260266-1c1e52d1590c?auto=format&fit=crop&q=80&w=800",
+    image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800",
   },
 ];
 
