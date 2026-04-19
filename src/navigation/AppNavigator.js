@@ -17,6 +17,7 @@ import RoommateProfileScreen from "../screens/RoommateProfileScreen";
 import SearchScreen from "../screens/SearchScreen";
 import ServiceProvidersScreen from "../screens/ServiceProvidersScreen";
 import ServicesScreen from "../screens/ServicesScreen";
+import LoginScreen from "../screens/LoginScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -77,7 +78,8 @@ export default function AppNavigator() {
   return (
     <ConversationProvider>
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="Search" component={SearchScreen} />
           <Stack.Screen name="Apartments" component={ApartmentsScreen} />
