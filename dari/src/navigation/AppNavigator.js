@@ -12,11 +12,13 @@ import PropertyDetailScreen from "../screens/PropertyDetailScreen";
 import RoommatesScreen from "../screens/RoommatesScreen";
 import SearchScreen from "../screens/SearchScreen";
 import ServicesScreen from "../screens/ServicesScreen";
+import WorkersScreen from "../screens/WorkersScreen";
+import { createNavigationContainerRef } from "@react-navigation/native";
+export const navigationRef = createNavigationContainerRef();
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Bottom tab bar (Home + Roommates + Inbox + Services)
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -36,14 +38,10 @@ function MainTabs() {
         tabBarLabelStyle: { fontSize: 11, fontWeight: "500" },
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
-          if (route.name === "Home")
-            iconName = focused ? "home" : "home-outline";
-          else if (route.name === "Roommates")
-            iconName = focused ? "people" : "people-outline";
-          else if (route.name === "Inbox")
-            iconName = focused ? "chatbubble" : "chatbubble-outline";
-          else if (route.name === "Services")
-            iconName = focused ? "construct" : "construct-outline";
+          if (route.name === "Home") iconName = focused ? "home" : "home-outline";
+          else if (route.name === "Roommates") iconName = focused ? "people" : "people-outline";
+          else if (route.name === "Inbox") iconName = focused ? "chatbubble" : "chatbubble-outline";
+          else if (route.name === "Services") iconName = focused ? "construct" : "construct-outline";
           return <Ionicons name={iconName} size={22} color={color} />;
         },
       })}
@@ -63,10 +61,9 @@ function MainTabs() {
   );
 }
 
-// Root stack: tabs + screens that push on top (no bottom bar)
 export default function AppNavigator() {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="Search" component={SearchScreen} />
@@ -74,6 +71,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Houses" component={HousesScreen} />
         <Stack.Screen name="PropertyDetail" component={PropertyDetailScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="Workers" component={WorkersScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
