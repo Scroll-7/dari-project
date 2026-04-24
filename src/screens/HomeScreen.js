@@ -15,10 +15,20 @@ import {
 import { COLORS, FONTS, SHADOWS, SIZES } from "../constants/theme";
 
 const CATEGORIES = [
-  { id: "1", title: "Apartments", icon: "business-outline", screen: "Apartments" },
-  { id: "2", title: "Houses",     icon: "home-outline",     screen: "Houses" },
-  { id: "3", title: "Rooms",      icon: "bed-outline",      screen: null },
-  { id: "4", title: "Commercial", icon: "briefcase-outline", screen: null },
+  {
+    id: "1",
+    title: "Apartments",
+    icon: "business-outline",
+    screen: "Apartments",
+  },
+  { id: "2", title: "Houses", icon: "home-outline", screen: "Houses" },
+  { id: "3", title: "Rooms", icon: "bed-outline", screen: "Rooms" },
+  {
+    id: "4",
+    title: "Commercial",
+    icon: "briefcase-outline",
+    screen: "Commercial",
+  },
 ];
 
 const FEATURED_PROPERTIES = [
@@ -27,16 +37,20 @@ const FEATURED_PROPERTIES = [
     title: "Skyline Studio",
     price: "1 200 DT/mois",
     location: "Centre-ville",
-    beds: 1, baths: 1,
-    image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800",
+    beds: 1,
+    baths: 1,
+    image:
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800",
   },
   {
     id: "2",
     title: "Cozy Villa",
     price: "2 500 DT/mois",
     location: "Banlieue",
-    beds: 3, baths: 2,
-    image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800",
+    beds: 3,
+    baths: 2,
+    image:
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800",
   },
 ];
 
@@ -53,14 +67,18 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Bonjour 👋</Text>
-            <Text style={styles.headline}>Trouvez votre{"\n"}prochain chez-vous</Text>
+            <Text style={styles.headline}>
+              Trouvez votre{"\n"}prochain chez-vous
+            </Text>
           </View>
           <TouchableOpacity
             onPress={() => navigation.navigate("Profile")}
             activeOpacity={0.85}
           >
             <Image
-              source={{ uri: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200" }}
+              source={{
+                uri: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200",
+              }}
               style={styles.avatar}
             />
             <View style={styles.onlineDot} />
@@ -126,7 +144,9 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity
             key={prop.id}
             style={styles.propertyCard}
-            onPress={() => navigation.navigate("PropertyDetail", { property: prop })}
+            onPress={() =>
+              navigation.navigate("PropertyDetail", { property: prop })
+            }
             activeOpacity={0.9}
           >
             <Image source={{ uri: prop.image }} style={styles.propertyImage} />
@@ -146,13 +166,25 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.propertyInfo}>
               <Text style={styles.propertyTitle}>{prop.title}</Text>
               <View style={styles.propertyMeta}>
-                <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.8)" />
+                <Ionicons
+                  name="location-outline"
+                  size={13}
+                  color="rgba(255,255,255,0.8)"
+                />
                 <Text style={styles.propertyLocation}>{prop.location}</Text>
                 <View style={styles.dot} />
-                <Ionicons name="bed-outline" size={13} color="rgba(255,255,255,0.8)" />
+                <Ionicons
+                  name="bed-outline"
+                  size={13}
+                  color="rgba(255,255,255,0.8)"
+                />
                 <Text style={styles.propertyLocation}>{prop.beds}</Text>
                 <View style={styles.dot} />
-                <Ionicons name="water-outline" size={13} color="rgba(255,255,255,0.8)" />
+                <Ionicons
+                  name="water-outline"
+                  size={13}
+                  color="rgba(255,255,255,0.8)"
+                />
                 <Text style={styles.propertyLocation}>{prop.baths}</Text>
               </View>
             </View>

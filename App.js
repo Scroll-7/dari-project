@@ -1,11 +1,11 @@
-import React from 'react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import AppNavigator from './src/navigation/AppNavigator';
+// App.js  — replace your existing App.js
+import { UserProvider } from "./src/context/UserContext";
+import AppNavigator from "./src/navigation/AppNavigator"; // adjust this path to match yours
 
 export default function App() {
   return (
-    <SafeAreaProvider style={{ flex: 1 }}>
+    <UserProvider>
       <AppNavigator />
-    </SafeAreaProvider>
+    </UserProvider>
   );
 }

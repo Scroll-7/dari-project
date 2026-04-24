@@ -1,17 +1,16 @@
-import { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { useConversations } from "../context/ConversationContext";
+import { useState } from "react";
 import {
-    FlatList,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
+import { useConversations } from "../context/ConversationContext";
 
 // ── Mock data ────────────────────────────────────────────────────────────────
 
@@ -129,17 +128,21 @@ const UnreadBadge = ({ count }) => (
 // Resolves a colored pill label from a chat item's type & isBinome fields.
 
 const CONTEXT_TAG_CONFIG = {
-  'binome-actuel':   { label: 'Binôme actuel',     bg: '#E1F5EE', color: '#0F6E56' },
-  'demande-binome':  { label: 'Demande de binôme', bg: '#EEF0FF', color: '#4B5BF5' },
-  'service':         { label: 'Service',            bg: '#FFF3E0', color: '#E65100' },
-  'property':        { label: 'Propriété',          bg: '#E8F4FD', color: '#0077B6' },
+  "binome-actuel": { label: "Binôme actuel", bg: "#E1F5EE", color: "#0F6E56" },
+  "demande-binome": {
+    label: "Demande de binôme",
+    bg: "#EEF0FF",
+    color: "#4B5BF5",
+  },
+  service: { label: "Service", bg: "#FFF3E0", color: "#E65100" },
+  property: { label: "Propriété", bg: "#E8F4FD", color: "#0077B6" },
 };
 
 function resolveTag(item) {
-  if (item.isBinome)                    return 'binome-actuel';
-  if (item.type === 'service' || item.tag === 'service') return 'service';
-  if (item.type === 'roommate')          return 'demande-binome';
-  if (item.type === 'property')          return 'property';
+  if (item.isBinome) return "binome-actuel";
+  if (item.type === "service" || item.tag === "service") return "service";
+  if (item.type === "roommate") return "demande-binome";
+  if (item.type === "property") return "property";
   return null;
 }
 
@@ -209,7 +212,9 @@ const ChatRow = ({ item, onPress }) => (
     <View style={styles.chatInfo}>
       <View style={styles.chatRowTop}>
         <View style={styles.chatNameRow}>
-          <Text style={styles.chatName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.chatName} numberOfLines={1}>
+            {item.name}
+          </Text>
           <ContextTag item={item} />
         </View>
         <Text style={styles.chatTime}>{item.time}</Text>
@@ -249,20 +254,21 @@ export default function InboxScreen() {
   // Merge mock CHATS with live conversations from context
   // Context convs take priority (they're real). Mock ones fill in the rest.
   const contextIds = new Set(conversations.map((c) => c.personId));
-  const mockAsConv = CHATS
-    .filter((c) => !contextIds.has(c.id))
-    .map((c) => ({
-      ...c,
-      personId: c.id,
-      avatarColor: c.color,
-      bgColor: c.bgColor,
-    }));
+  const mockAsConv = CHATS.filter((c) => !contextIds.has(c.id)).map((c) => ({
+    ...c,
+    personId: c.id,
+    avatarColor: c.color,
+    bgColor: c.bgColor,
+  }));
 
   const allChats = [
     ...conversations.map((c) => ({
       ...c,
-      time: new Date(c.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      type: c.tag === 'roommate' ? 'roommate' : 'service',
+      time: new Date(c.lastTime).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      type: c.tag === "roommate" ? "roommate" : "service",
       isBinome: false,
     })),
     ...mockAsConv,
@@ -302,32 +308,29 @@ export default function InboxScreen() {
       </View>
 
       {/* Filter tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filtersScroll}
-        contentContainerStyle={styles.filtersContent}
-      >
-        {FILTERS.map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[
-              styles.filterTab,
-              activeFilter === f && styles.filterTabActive,
-            ]}
-            onPress={() => setActiveFilter(f)}
-          >
-            <Text
+      <View style={styles.filtersWrapper}>
+        <View style={styles.filtersSegment}>
+          {FILTERS.map((f) => (
+            <TouchableOpacity
+              key={f}
               style={[
-                styles.filterTabText,
-                activeFilter === f && styles.filterTabTextActive,
+                styles.filterTab,
+                activeFilter === f && styles.filterTabActive,
               ]}
+              onPress={() => setActiveFilter(f)}
             >
-              {f}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text
+                style={[
+                  styles.filterTabText,
+                  activeFilter === f && styles.filterTabTextActive,
+                ]}
+              >
+                {f}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
       <FlatList
         data={filteredChats}
@@ -427,35 +430,42 @@ const styles = StyleSheet.create({
   },
 
   // Filters
-  filtersScroll: {
+  filtersWrapper: {
     backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  filtersContent: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  filtersSegment: {
     flexDirection: "row",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    padding: 3,
   },
   filterTab: {
-    paddingVertical: 7,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    backgroundColor: "#F3F4F6",
-    marginRight: 8,
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   filterTabActive: {
-    backgroundColor: ACCENT,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   filterTabText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
-    color: "#6B7280",
+    color: "#9CA3AF",
   },
   filterTabTextActive: {
-    color: "#fff",
-    fontWeight: "600",
+    color: ACCENT,
+    fontWeight: "700",
   },
 
   // List
@@ -619,8 +629,8 @@ const styles = StyleSheet.create({
   },
   contextTagText: {
     fontSize: 9,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    fontWeight: "700",
+    textTransform: "uppercase",
     letterSpacing: 0.3,
   },
 
