@@ -9,12 +9,13 @@ let firestore: ReturnType<typeof getFirestore> | null = null;
 export function initFirebase() {
   if (getApps().length === 0) {
     const firebaseConfig = {
-      apiKey: 'YOUR_API_KEY',
-      authDomain: 'YOUR_AUTH_DOMAIN',
-      projectId: 'YOUR_PROJECT_ID',
-      storageBucket: 'YOUR_STORAGE_BUCKET',
-      messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-      appId: 'YOUR_APP_ID',
+      apiKey: "AIzaSyBo0kbbnJBDBv-ShS1dg_BpIuMyLkrOVoI",
+      authDomain: "dari-app-70704.firebaseapp.com",
+      projectId: "dari-app-70704",
+      storageBucket: "dari-app-70704.firebasestorage.app",
+      messagingSenderId: "742100137395",
+      appId: "1:742100137395:web:1dc2b159a7fe9596da87c6",
+      measurementId: "G-4H3T7EJ7N9"
     };
     initializeApp(firebaseConfig);
   }

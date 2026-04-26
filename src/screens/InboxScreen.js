@@ -1,6 +1,8 @@
-import { useNavigation } from "@react-navigation/native";
-import { useState } from "react";
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   FlatList,
   SafeAreaView,
   StatusBar,
@@ -8,279 +10,212 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from "react-native";
-import { useConversations } from "../context/ConversationContext";
+  View,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { useConversations } from '../context/ConversationContext';
+import { Avatar } from '../components/Avatar';
+import { COLORS, FONTS, SHADOWS, SIZES } from '../constants/theme';
 
-// ── Mock data ────────────────────────────────────────────────────────────────
+// ─── Mock data ────────────────────────────────────────────────────────────────
 
 const BINOME_REQUESTS = [
   {
-    id: "br1",
-    name: "Karim Aissani",
-    initials: "KA",
-    color: "#4B5BF5",
-    bgColor: "#EEF0FF",
-    major: "Computer Science student",
-    sentAt: "5m ago",
+    id: 'br1',
+    name: 'Karim Aissani',
+    initials: 'KA',
+    color: '#4B5BF5',
+    bgColor: '#EEF0FF',
+    major: 'Computer Science student',
+    sentAt: '5m ago',
   },
 ];
 
 const CHATS = [
-  {
-    id: "c1",
-    name: "Sara Benali",
-    initials: "SB",
-    color: "#D85A30",
-    bgColor: "#FFD6CC",
-    lastMessage: "Is the apartment still available?",
-    time: "2m ago",
-    unread: 2,
-    online: true,
-    isBinome: false,
-    type: "property",
-  },
-  {
-    id: "c2",
-    name: "Youssef Mansour",
-    initials: "YM",
-    color: "#185FA5",
-    bgColor: "#D6EDFF",
-    lastMessage: "You: Sure, we can schedule a visit",
-    time: "1h ago",
-    unread: 0,
-    online: false,
-    isBinome: false,
-    type: "roommate",
-  },
-  {
-    id: "c3",
-    name: "Rania Lakhal",
-    initials: "RL",
-    color: "#0F6E56",
-    bgColor: "#E1F5EE",
-    lastMessage: "Let's split the utilities 50/50",
-    time: "Yesterday",
-    unread: 0,
-    online: true,
-    isBinome: true,
-    type: "roommate",
-  },
-  {
-    id: "c4",
-    name: "Ahmed Hamdi",
-    initials: "AH",
-    color: "#BA7517",
-    bgColor: "#FFF0D6",
-    lastMessage: "The landlord confirmed the price",
-    time: "Mon",
-    unread: 0,
-    online: false,
-    isBinome: false,
-    type: "property",
-  },
-  {
-    id: "c5",
-    name: "Lina Dridi",
-    initials: "LD",
-    color: "#993556",
-    bgColor: "#FBEAF0",
-    lastMessage: "Can we meet this weekend to see the place?",
-    time: "Sun",
-    unread: 1,
-    online: false,
-    isBinome: false,
-    type: "roommate",
-  },
+  { id: 'c1', name: 'Sara Benali',    initials: 'SB', color: '#D85A30', bgColor: '#FFD6CC', lastMessage: 'Is the apartment still available?',    time: '2m ago',   unread: 2, online: true,  isBinome: false, type: 'property' },
+  { id: 'c2', name: 'Youssef Mansour', initials: 'YM', color: '#185FA5', bgColor: '#D6EDFF', lastMessage: 'Sure, we can schedule a visit',         time: '1h ago',   unread: 0, online: false, isBinome: false, type: 'roommate' },
+  { id: 'c3', name: 'Rania Lakhal',   initials: 'RL', color: '#0F6E56', bgColor: '#E1F5EE', lastMessage: "Let's split the utilities 50/50",       time: 'Yesterday', unread: 0, online: true,  isBinome: true,  type: 'roommate' },
+  { id: 'c4', name: 'Ahmed Hamdi',    initials: 'AH', color: '#BA7517', bgColor: '#FFF0D6', lastMessage: 'The landlord confirmed the price',       time: 'Mon',       unread: 0, online: false, isBinome: false, type: 'property' },
+  { id: 'c5', name: 'Lina Dridi',     initials: 'LD', color: '#993556', bgColor: '#FBEAF0', lastMessage: 'Can we meet this weekend?',              time: 'Sun',       unread: 1, online: false, isBinome: false, type: 'roommate' },
 ];
 
-const FILTERS = ["All", "Roommate Requests", "Property"];
+// Online-first contacts (for story-style row)
+const STORIES = CHATS.filter((c) => c.online).slice(0, 5);
 
-// ── Sub-components ───────────────────────────────────────────────────────────
+const FILTERS = ['All', 'Roommates', 'Property'];
 
-const Avatar = ({ initials, color, bgColor, size = 46 }) => (
-  <View
-    style={[
-      styles.avatar,
-      {
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: bgColor,
-      },
-    ]}
-  >
-    <Text style={[styles.avatarText, { color, fontSize: size * 0.33 }]}>
-      {initials}
-    </Text>
-  </View>
-);
-
-const OnlineDot = () => <View style={styles.onlineDot} />;
-
-const UnreadBadge = ({ count }) => (
-  <View style={styles.unreadBadge}>
-    <Text style={styles.unreadBadgeText}>{count}</Text>
-  </View>
-);
-
-// ── Context Tag ─────────────────────────────────────────────────────────────
-// Resolves a colored pill label from a chat item's type & isBinome fields.
-
-const CONTEXT_TAG_CONFIG = {
-  "binome-actuel": { label: "Binôme actuel", bg: "#E1F5EE", color: "#0F6E56" },
-  "demande-binome": {
-    label: "Demande de binôme",
-    bg: "#EEF0FF",
-    color: "#4B5BF5",
-  },
-  service: { label: "Service", bg: "#FFF3E0", color: "#E65100" },
-  property: { label: "Propriété", bg: "#E8F4FD", color: "#0077B6" },
+const TAG_CONFIG = {
+  'binome-actuel':  { label: 'Binôme', bg: '#E1F5EE', color: '#0F6E56' },
+  'demande-binome': { label: 'Roommate', bg: '#EEF0FF', color: '#4B5BF5' },
+  service:          { label: 'Service', bg: '#FFF3E0', color: '#E65100' },
+  property:         { label: 'Propriété', bg: '#E8F4FD', color: '#0077B6' },
 };
-
 function resolveTag(item) {
-  if (item.isBinome) return "binome-actuel";
-  if (item.type === "service" || item.tag === "service") return "service";
-  if (item.type === "roommate") return "demande-binome";
-  if (item.type === "property") return "property";
+  if (item.isBinome) return 'binome-actuel';
+  if (item.type === 'service' || item.tag === 'service') return 'service';
+  if (item.type === 'roommate') return 'demande-binome';
+  if (item.type === 'property') return 'property';
   return null;
 }
 
-const ContextTag = ({ item }) => {
-  const key = resolveTag(item);
-  if (!key) return null;
-  const { label, bg, color } = CONTEXT_TAG_CONFIG[key];
+// ── Typing indicator ──────────────────────────────────────────────────────────
+function TypingDots() {
+  const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+
+  useEffect(() => {
+    const anim = (dot, delay) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: -5, duration: 250, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 250, useNativeDriver: true }),
+        ])
+      ).start();
+    dots.forEach((d, i) => anim(d, i * 150));
+  }, []);
+
   return (
-    <View style={[styles.contextTag, { backgroundColor: bg }]}>
-      <Text style={[styles.contextTagText, { color }]}>{label}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 }}>
+      {dots.map((d, i) => (
+        <Animated.View key={i} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: COLORS.textLight, transform: [{ translateY: d }] }} />
+      ))}
     </View>
   );
-};
+}
 
-// ── Binome Request Card ──────────────────────────────────────────────────────
+// ─── Chat Row ─────────────────────────────────────────────────────────────────
 
-const BinomeRequestCard = ({ request, onAccept, onDecline }) => (
-  <View style={styles.binomeCard}>
-    <View style={styles.binomeCardHeader}>
-      <View style={styles.binomeDot} />
-      <Text style={styles.binomeCardLabel}>Binome Request</Text>
-    </View>
-    <View style={styles.binomeCardBody}>
-      <Avatar
-        initials={request.initials}
-        color={request.color}
-        bgColor={request.bgColor}
-        size={42}
-      />
-      <View style={styles.binomeCardInfo}>
-        <Text style={styles.binomeCardName}>{request.name}</Text>
-        <Text style={styles.binomeCardSub} numberOfLines={1}>
-          Wants to be your roommate · {request.major}
-        </Text>
-      </View>
-      <View style={styles.binomeCardActions}>
-        <TouchableOpacity
-          style={styles.declineBtn}
-          onPress={() => onDecline(request.id)}
-        >
-          <Text style={styles.declineBtnText}>Decline</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.acceptBtn}
-          onPress={() => onAccept(request.id)}
-        >
-          <Text style={styles.acceptBtnText}>Accept</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-);
+function ChatRow({ item, onPress, typing }) {
+  const key  = resolveTag(item);
+  const tag  = key ? TAG_CONFIG[key] : null;
 
-// ── Chat Row ─────────────────────────────────────────────────────────────────
-
-const ChatRow = ({ item, onPress }) => (
-  <TouchableOpacity style={styles.chatRow} onPress={() => onPress(item)}>
-    <View style={styles.avatarWrapper}>
+  return (
+    <TouchableOpacity style={styles.chatRow} onPress={() => onPress(item)}>
       <Avatar
         initials={item.initials}
         color={item.color ?? item.avatarColor}
         bgColor={item.bgColor}
-        size={46}
+        size={48}
+        onlineDot={item.online}
       />
-      {item.online && <OnlineDot />}
-    </View>
-    <View style={styles.chatInfo}>
-      <View style={styles.chatRowTop}>
-        <View style={styles.chatNameRow}>
-          <Text style={styles.chatName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <ContextTag item={item} />
+      <View style={styles.chatInfo}>
+        <View style={styles.chatRowTop}>
+          <View style={styles.chatNameRow}>
+            <Text style={styles.chatName} numberOfLines={1}>{item.name}</Text>
+            {tag && (
+              <View style={[styles.tagChip, { backgroundColor: tag.bg }]}>
+                <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.chatTime}>{item.time}</Text>
         </View>
-        <Text style={styles.chatTime}>{item.time}</Text>
+        {typing
+          ? <TypingDots />
+          : <Text style={[styles.chatPreview, item.unread > 0 && styles.chatPreviewBold]} numberOfLines={1}>{item.lastMessage}</Text>
+        }
       </View>
-      <Text
-        style={[styles.chatPreview, item.unread > 0 && styles.chatPreviewBold]}
-        numberOfLines={1}
-      >
-        {item.lastMessage}
-      </Text>
-    </View>
-    {item.unread > 0 && <UnreadBadge count={item.unread} />}
-  </TouchableOpacity>
-);
+      {item.unread > 0 && (
+        <View style={styles.unreadBadge}>
+          <Text style={styles.unreadText}>{item.unread}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
 
-// ── Main Screen ──────────────────────────────────────────────────────────────
+// ─── Stories Row ─────────────────────────────────────────────────────────────
+
+function StoriesRow({ chats }) {
+  return (
+    <View style={styles.storiesWrap}>
+      <Text style={styles.storiesLabel}>En ligne</Text>
+      <View style={styles.storiesRow}>
+        {chats.map((c) => (
+          <View key={c.id} style={styles.storyItem}>
+            <View style={styles.storyRing}>
+              <Avatar initials={c.initials} color={c.color} bgColor={c.bgColor} size={44} />
+            </View>
+            <Text style={styles.storyName} numberOfLines={1}>{c.name.split(' ')[0]}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ─── Binome Request ───────────────────────────────────────────────────────────
+
+function BinomeCard({ request, onAccept, onDecline }) {
+  return (
+    <View style={styles.binomeCard}>
+      <View style={styles.binomeHeader}>
+        <View style={styles.binomeDot} />
+        <Text style={styles.binomeLabel}>ROOMMATE REQUEST</Text>
+      </View>
+      <View style={styles.binomeBody}>
+        <Avatar initials={request.initials} color={request.color} bgColor={request.bgColor} size={42} />
+        <View style={styles.binomeInfo}>
+          <Text style={styles.binomeName}>{request.name}</Text>
+          <Text style={styles.binomeSub} numberOfLines={1}>{request.major} · {request.sentAt}</Text>
+        </View>
+        <View style={styles.binomeBtns}>
+          <TouchableOpacity style={styles.decBtn} onPress={() => onDecline(request.id)}>
+            <Text style={styles.decBtnText}>✕</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.accBtn} onPress={() => onAccept(request.id)}>
+            <Text style={styles.accBtnText}>✓</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function InboxScreen() {
   const navigation = useNavigation();
   const { conversations } = useConversations();
-  const [activeFilter, setActiveFilter] = useState("All");
-  const [search, setSearch] = useState("");
-  const [requests, setRequests] = useState(BINOME_REQUESTS);
+  const [activeFilter, setActiveFilter] = useState('All');
+  const [search, setSearch]             = useState('');
+  const [requests, setRequests]         = useState(BINOME_REQUESTS);
+  const [typingId] = useState('c1'); // mock: c1 is "typing"
 
-  const handleAccept = (id) => {
-    setRequests((prev) => prev.filter((r) => r.id !== id));
-  };
+  const handleChatPress = (chat) =>
+    navigation.navigate('Chat', { personId: chat.personId ?? chat.id });
 
-  const handleDecline = (id) => {
-    setRequests((prev) => prev.filter((r) => r.id !== id));
-  };
-
-  const handleChatPress = (chat) => {
-    navigation.navigate("Chat", { personId: chat.personId ?? chat.id });
-  };
-
-  // Merge mock CHATS with live conversations from context
-  // Context convs take priority (they're real). Mock ones fill in the rest.
-  const contextIds = new Set(conversations.map((c) => c.personId));
-  const mockAsConv = CHATS.filter((c) => !contextIds.has(c.id)).map((c) => ({
-    ...c,
-    personId: c.id,
-    avatarColor: c.color,
-    bgColor: c.bgColor,
+  const contextIds  = new Set(conversations.map((c) => c.personId));
+  const mockAsConv  = CHATS.filter((c) => !contextIds.has(c.id)).map((c) => ({
+    ...c, personId: c.id, avatarColor: c.color,
   }));
-
   const allChats = [
     ...conversations.map((c) => ({
       ...c,
-      time: new Date(c.lastTime).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      type: c.tag === "roommate" ? "roommate" : "service",
+      time: new Date(c.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      type: c.tag === 'roommate' ? 'roommate' : 'service',
       isBinome: false,
     })),
     ...mockAsConv,
   ];
 
   const filteredChats = allChats.filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
-    if (!matchesSearch) return false;
-    if (activeFilter === "Roommate Requests") return c.type === "roommate";
-    if (activeFilter === "Property") return c.type === "property";
+    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase());
+    if (!matchSearch) return false;
+    if (activeFilter === 'Roommates') return c.type === 'roommate';
+    if (activeFilter === 'Property')  return c.type === 'property';
     return true;
   });
+
+  const totalUnread = allChats.reduce((acc, c) => acc + (c.unread ?? 0), 0);
+
+  // Animated tab indicator
+  const indicatorPos = useRef(new Animated.Value(0)).current;
+  const TAB_WIDTH = 100;
+  const handleFilter = (f, i) => {
+    setActiveFilter(f);
+    Animated.spring(indicatorPos, { toValue: i * TAB_WIDTH, useNativeDriver: false, tension: 200, friction: 18 }).start();
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -288,48 +223,47 @@ export default function InboxScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Inbox</Text>
+        <View>
+          <Text style={styles.headerTitle}>Inbox</Text>
+          {totalUnread > 0 && (
+            <Text style={styles.headerSub}>{totalUnread} non lus</Text>
+          )}
+        </View>
         <TouchableOpacity style={styles.composeBtn}>
-          {/* Compose icon */}
-          <Text style={styles.composeBtnText}>✉</Text>
+          <Ionicons name="create-outline" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* Search bar */}
-      <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
+      {/* Search */}
+      <View style={styles.searchWrap}>
+        <Ionicons name="search" size={16} color={COLORS.textLight} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search messages..."
-          placeholderTextColor="#aaa"
+          placeholder="Rechercher…"
+          placeholderTextColor={COLORS.textLight}
           value={search}
           onChangeText={setSearch}
         />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')}>
+            <Ionicons name="close-circle" size={16} color={COLORS.textLight} />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Filter tabs */}
-      <View style={styles.filtersWrapper}>
-        <View style={styles.filtersSegment}>
-          {FILTERS.map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[
-                styles.filterTab,
-                activeFilter === f && styles.filterTabActive,
-              ]}
-              onPress={() => setActiveFilter(f)}
-            >
-              <Text
-                style={[
-                  styles.filterTabText,
-                  activeFilter === f && styles.filterTabTextActive,
-                ]}
-              >
-                {f}
-              </Text>
+      {/* Stories row */}
+      {STORIES.length > 0 && <StoriesRow chats={STORIES} />}
+
+      {/* Filter tabs with animated underline */}
+      <View style={styles.tabsContainer}>
+        <View style={styles.tabsRow}>
+          {FILTERS.map((f, i) => (
+            <TouchableOpacity key={f} style={[styles.tab, { width: TAB_WIDTH }]} onPress={() => handleFilter(f, i)}>
+              <Text style={[styles.tabText, activeFilter === f && styles.tabTextActive]}>{f}</Text>
             </TouchableOpacity>
           ))}
         </View>
+        <Animated.View style={[styles.tabIndicator, { left: indicatorPos, width: TAB_WIDTH }]} />
       </View>
 
       <FlatList
@@ -339,18 +273,18 @@ export default function InboxScreen() {
           requests.length > 0 ? (
             <View style={styles.requestsSection}>
               {requests.map((r) => (
-                <BinomeRequestCard
+                <BinomeCard
                   key={r.id}
                   request={r}
-                  onAccept={handleAccept}
-                  onDecline={handleDecline}
+                  onAccept={(id) => setRequests((p) => p.filter((x) => x.id !== id))}
+                  onDecline={(id) => setRequests((p) => p.filter((x) => x.id !== id))}
                 />
               ))}
             </View>
           ) : null
         }
         renderItem={({ item }) => (
-          <ChatRow item={item} onPress={handleChatPress} />
+          <ChatRow item={item} onPress={handleChatPress} typing={item.id === typingId} />
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.listContent}
@@ -360,299 +294,107 @@ export default function InboxScreen() {
   );
 }
 
-// ── Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
-const ACCENT = "#4F46E5";
+const ACCENT = COLORS.primary;
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#F9FAFB",
-  },
+  safe: { flex: 1, backgroundColor: COLORS.background },
 
   // Header
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,
+    borderBottomWidth: 1, borderBottomColor: COLORS.line,
   },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#111",
-    letterSpacing: -0.5,
-  },
+  headerTitle: { fontSize: 26, fontWeight: '700', color: '#111', letterSpacing: -0.5 },
+  headerSub:   { ...FONTS.caption, color: COLORS.primary, marginTop: 2 },
   composeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: ACCENT,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  composeBtnText: {
-    fontSize: 16,
-    color: "#fff",
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center',
   },
 
   // Search
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    marginVertical: 10,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.card,
+    marginHorizontal: SIZES.medium, marginVertical: 10,
+    borderRadius: SIZES.radius.lg, paddingHorizontal: 14, paddingVertical: 10,
+    borderWidth: 1, borderColor: COLORS.line,
+    ...SHADOWS.xs,
   },
-  searchIcon: {
-    fontSize: 14,
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: "#111",
-  },
+  searchInput: { flex: 1, ...FONTS.body1, color: COLORS.text },
 
-  // Filters
-  filtersWrapper: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+  // Stories
+  storiesWrap:  { paddingHorizontal: SIZES.medium, paddingBottom: SIZES.small },
+  storiesLabel: { ...FONTS.caption, color: COLORS.textLight, marginBottom: 8, fontWeight: '600', textTransform: 'uppercase' },
+  storiesRow:   { flexDirection: 'row', gap: 14 },
+  storyItem:    { alignItems: 'center', gap: 4 },
+  storyRing: {
+    width: 52, height: 52, borderRadius: 26,
+    borderWidth: 2.5, borderColor: ACCENT,
+    justifyContent: 'center', alignItems: 'center',
   },
-  filtersSegment: {
-    flexDirection: "row",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    padding: 3,
-  },
-  filterTab: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  filterTabActive: {
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  filterTabText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#9CA3AF",
-  },
-  filterTabTextActive: {
-    color: ACCENT,
-    fontWeight: "700",
+  storyName: { fontSize: 10, color: COLORS.textLight, fontWeight: '600' },
+
+  // Tabs
+  tabsContainer: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: COLORS.line },
+  tabsRow:       { flexDirection: 'row' },
+  tab:           { paddingVertical: 12, alignItems: 'center' },
+  tabText:       { fontSize: 13, fontWeight: '600', color: COLORS.textLight },
+  tabTextActive: { color: ACCENT },
+  tabIndicator: {
+    position: 'absolute', bottom: 0, height: 2.5,
+    backgroundColor: ACCENT, borderRadius: 2,
   },
 
   // List
-  listContent: {
-    paddingBottom: 20,
-  },
-  requestsSection: {
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 4,
-    gap: 10,
-  },
+  listContent:    { paddingBottom: 20 },
+  requestsSection:{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4, gap: 10 },
 
-  // Binome request card
+  // Binome card
   binomeCard: {
-    backgroundColor: "#EEF0FF",
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#c7ccf7",
+    backgroundColor: '#EEF0FF', borderRadius: 14,
+    padding: 14, borderWidth: 1, borderColor: '#c7ccf7',
   },
-  binomeCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    gap: 6,
+  binomeHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  binomeDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: ACCENT },
+  binomeLabel:  { fontSize: 10, fontWeight: '700', color: ACCENT, letterSpacing: 0.5 },
+  binomeBody:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  binomeInfo:   { flex: 1 },
+  binomeName:   { fontSize: 14, fontWeight: '600', color: '#111' },
+  binomeSub:    { fontSize: 12, color: '#666', marginTop: 2 },
+  binomeBtns:   { flexDirection: 'row', gap: 8 },
+  decBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd',
+    justifyContent: 'center', alignItems: 'center',
   },
-  binomeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: ACCENT,
+  decBtnText: { fontSize: 14, color: '#999', fontWeight: '700' },
+  accBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center',
   },
-  binomeCardLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: ACCENT,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  binomeCardBody: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  binomeCardInfo: {
-    flex: 1,
-  },
-  binomeCardName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111",
-  },
-  binomeCardSub: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 2,
-  },
-  binomeCardActions: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  declineBtn: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-  declineBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#666",
-  },
-  acceptBtn: {
-    backgroundColor: ACCENT,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-  acceptBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#fff",
-  },
-
-  // Avatar
-  avatar: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarText: {
-    fontWeight: "700",
-  },
-  avatarWrapper: {
-    position: "relative",
-  },
-  onlineDot: {
-    position: "absolute",
-    bottom: 1,
-    right: 1,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "#22c55e",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
+  accBtnText: { fontSize: 14, color: '#fff', fontWeight: '700' },
 
   // Chat row
   chatRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff', paddingHorizontal: SIZES.medium, paddingVertical: 12, gap: 12,
   },
-  chatInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-  chatRowTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  chatNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flex: 1,
-  },
-  chatName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111",
-  },
-  chatTime: {
-    fontSize: 11,
-    color: "#888",
-    flexShrink: 0,
-  },
-  chatPreview: {
-    fontSize: 13,
-    color: "#888",
-    marginTop: 2,
-  },
-  chatPreviewBold: {
-    color: "#444",
-    fontWeight: "500",
-  },
-
-  // Context tag (replaces old binomeTag)
-  contextTag: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    flexShrink: 0,
-  },
-  contextTagText: {
-    fontSize: 9,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-  },
-
-  // Unread badge
+  chatInfo: { flex: 1, minWidth: 0 },
+  chatRowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  chatNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  chatName: { fontSize: 15, fontWeight: '600', color: '#111' },
+  tagChip:  { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  tagText:  { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  chatTime: { fontSize: 11, color: '#888' },
+  chatPreview:     { fontSize: 13, color: '#888', marginTop: 2 },
+  chatPreviewBold: { color: '#444', fontWeight: '500' },
   unreadBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: ACCENT,
-    justifyContent: "center",
-    alignItems: "center",
-    flexShrink: 0,
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center',
   },
-  unreadBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#fff",
-  },
-
-  separator: {
-    height: 1,
-    backgroundColor: "#f5f5f5",
-    marginLeft: 72,
-  },
+  unreadText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  separator:  { height: 1, backgroundColor: '#f5f5f5', marginLeft: 76 },
 });
