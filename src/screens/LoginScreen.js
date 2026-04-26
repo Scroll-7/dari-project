@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
+import { loginUser } from "../firebase/auth";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -17,10 +18,28 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Navigate to the Main Tab interface
-    navigation.replace("Main");
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setErrorMessage("Please enter both email and password.");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage("");
+
+    const { user, error } = await loginUser(email, password);
+
+    setIsLoading(false);
+
+    if (error) {
+      setErrorMessage(error);
+    } else if (user) {
+      // The onAuthStateChanged listener in AuthContext will automatically 
+      // navigate the user to the Main stack.
+    }
   };
 
   return (
@@ -37,6 +56,10 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <View style={styles.formContainer}>
+          {errorMessage ? (
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          ) : null}
+
           <Text style={styles.inputLabel}>Email Address</Text>
           <View style={styles.inputWrapper}>
             <Ionicons
@@ -95,7 +118,9 @@ export default function LoginScreen({ navigation }) {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.loginBtnText}>Sign In</Text>
+              <Text style={styles.loginBtnText}>
+                {isLoading ? "Signing In..." : "Sign In"}
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -118,7 +143,7 @@ export default function LoginScreen({ navigation }) {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don&apos;t have an account? </Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
             <Text style={styles.signupText}>Sign up</Text>
           </TouchableOpacity>
         </View>
@@ -149,6 +174,12 @@ const styles = StyleSheet.create({
     padding: SIZES.large,
     borderRadius: 24,
     ...SHADOWS.medium,
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: SIZES.medium,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   inputLabel: { ...FONTS.h3, color: COLORS.text, marginBottom: 8 },
   inputWrapper: {

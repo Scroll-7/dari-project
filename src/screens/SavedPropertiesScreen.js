@@ -1,46 +1,63 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import {
+  FlatList,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import PropertyCard from '../components/PropertyCard';
+import { useFavorites } from '../context/FavoritesContext';
 import { PROPERTIES } from '../constants/mockData';
-
-// Mock: first 3 are "saved"
-const INITIAL_SAVED = ['1', '2', '7'];
+import { COLORS, FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SavedPropertiesScreen({ navigation }) {
-  const [savedIds, setSavedIds] = useState(INITIAL_SAVED);
-  const data = PROPERTIES.filter(p => savedIds.includes(p.id));
-
-  const remove = (id) => setSavedIds(prev => prev.filter(i => i !== id));
+  const { getFavoriteIds, toggleFavorite } = useFavorites();
+  const savedIds = getFavoriteIds();
+  const data     = PROPERTIES.filter((p) => savedIds.includes(p.id));
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color="#333" />
+      <StatusBar barStyle="light-content" />
+
+      {/* Gradient header */}
+      <LinearGradient colors={GRADIENTS.accent} style={styles.header} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.title}>Saved Properties</Text>
-        <View style={{ width: 22 }} />
-      </View>
+        <Text style={styles.headerTitle}>Propriétés sauvegardées</Text>
+        <View style={styles.countBadge}>
+          <Text style={styles.countText}>{data.length}</Text>
+        </View>
+      </LinearGradient>
+
       <FlatList
         data={data}
-        keyExtractor={i => i.id}
-        contentContainerStyle={{ padding: 16 }}
-        ListEmptyComponent={<View style={styles.empty}><Ionicons name="heart-outline" size={48} color="#ccc" /><Text style={styles.emptyText}>No saved properties yet</Text></View>}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('PropertyDetail', { property: item })}>
-            <Image source={{ uri: item.image }} style={styles.img} />
-            <View style={styles.cardBody}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="location-outline" size={12} color="#888" />
-                <Text style={styles.sub}> {item.neighborhood}, {item.city}</Text>
-              </View>
-              <Text style={styles.price}>{item.price} TND<Text style={styles.period}>/{item.period}</Text></Text>
+        keyExtractor={(i) => i.id}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="heart-outline" size={48} color={COLORS.textLight} />
             </View>
-            <TouchableOpacity style={styles.removeBtn} onPress={() => remove(item.id)}>
-              <Ionicons name="heart" size={20} color="#4461F2" />
+            <Text style={styles.emptyTitle}>Aucune propriété sauvegardée</Text>
+            <Text style={styles.emptySub}>Appuyez sur le cœur sur n'importe quelle annonce pour la sauvegarder ici.</Text>
+            <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate('Search')}>
+              <Text style={styles.browseBtnText}>Parcourir les annonces</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <PropertyCard
+            property={item}
+            onPress={() => navigation.navigate('PropertyDetail', { property: item })}
+            horizontal
+          />
         )}
       />
     </SafeAreaView>
@@ -48,17 +65,42 @@ export default function SavedPropertiesScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F5F7FA' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
-  title: { fontSize: 17, fontWeight: '700', color: '#222' },
-  card: { backgroundColor: '#fff', borderRadius: 16, marginBottom: 14, flexDirection: 'row', overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, alignItems: 'center' },
-  img: { width: 90, height: 90 },
-  cardBody: { flex: 1, padding: 12 },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: '#222', marginBottom: 4 },
-  sub: { fontSize: 11, color: '#888', textTransform: 'capitalize' },
-  price: { fontSize: 14, fontWeight: '700', color: '#4461F2', marginTop: 6 },
-  period: { fontSize: 11, color: '#888', fontWeight: '400' },
-  removeBtn: { padding: 14 },
-  empty: { alignItems: 'center', marginTop: 80 },
-  emptyText: { marginTop: 12, color: '#aaa', fontSize: 14 },
+  safe: { flex: 1, backgroundColor: COLORS.background },
+
+  header: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: SIZES.medium, paddingTop: SIZES.large, paddingBottom: SIZES.medium,
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  headerTitle: { flex: 1, ...FONTS.h3, color: '#fff' },
+  countBadge: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  countText: { ...FONTS.caption, color: '#fff', fontWeight: '700' },
+
+  list: { padding: SIZES.medium, paddingBottom: 100 },
+
+  empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: SIZES.xl },
+  emptyIcon: {
+    width: 90, height: 90, borderRadius: 45,
+    backgroundColor: COLORS.primaryOpacity,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: SIZES.large,
+  },
+  emptyTitle: { ...FONTS.h3, color: COLORS.text, textAlign: 'center' },
+  emptySub:   { ...FONTS.body2, color: COLORS.textLight, textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  browseBtn: {
+    marginTop: SIZES.large,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.large, paddingVertical: 12,
+    borderRadius: SIZES.radius.pill,
+    ...SHADOWS.glow,
+  },
+  browseBtnText: { ...FONTS.body1, color: '#fff', fontWeight: '700' },
 });

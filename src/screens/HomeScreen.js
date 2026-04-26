@@ -1,116 +1,173 @@
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useCallback, useRef, useState } from 'react';
 import {
+  Animated,
   Image,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
 
-import { COLORS, FONTS, SHADOWS, SIZES } from "../constants/theme";
+import PropertyCard from '../components/PropertyCard';
+import { SectionHeader } from '../components/SectionHeader';
+import { COLORS, FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { PROPERTIES } from '../constants/mockData';
+
+// ─── Static data ─────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  {
-    id: "1",
-    title: "Apartments",
-    icon: "business-outline",
-    screen: "Apartments",
-  },
-  { id: "2", title: "Houses", icon: "home-outline", screen: "Houses" },
-  { id: "3", title: "Rooms", icon: "bed-outline", screen: "Rooms" },
-  {
-    id: "4",
-    title: "Commercial",
-    icon: "briefcase-outline",
-    screen: "Commercial",
-  },
+  { id: '1', title: 'Apartments', icon: 'business-outline',  screen: 'Apartments', color: COLORS.primary,  bg: '#EEF2FF' },
+  { id: '2', title: 'Houses',     icon: 'home-outline',       screen: 'Houses',     color: COLORS.teal,    bg: '#F0FDFA' },
+  { id: '3', title: 'Rooms',      icon: 'bed-outline',        screen: 'Rooms',      color: COLORS.rose,    bg: '#FFF1F2' },
+  { id: '4', title: 'Commercial', icon: 'briefcase-outline',  screen: 'Commercial', color: COLORS.gold,    bg: '#FFFBEB' },
 ];
 
-const FEATURED_PROPERTIES = [
-  {
-    id: "1",
-    title: "Skyline Studio",
-    price: "1 200 DT/mois",
-    location: "Centre-ville",
-    beds: 1,
-    baths: 1,
-    image:
-      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800",
-  },
-  {
-    id: "2",
-    title: "Cozy Villa",
-    price: "2 500 DT/mois",
-    location: "Banlieue",
-    beds: 3,
-    baths: 2,
-    image:
-      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800",
-  },
+const QUICK_FILTERS = [
+  { id: 'all',      label: '🔥 All' },
+  { id: 'featured', label: '✨ Featured' },
+  { id: 'new',      label: '🆕 New' },
+  { id: 'cheap',    label: '💰 Budget' },
 ];
+
+const AGENTS = [
+  { id: '1', name: 'Amira K.', rating: 4.9, deals: 48, image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200' },
+  { id: '2', name: 'Youssef M.', rating: 4.8, deals: 36, image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200' },
+  { id: '3', name: 'Ines B.', rating: 4.7, deals: 29, image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200' },
+];
+
+const STATS = [
+  { label: 'Listings', value: '1.2k+', icon: 'home' },
+  { label: 'This Week', value: '48',   icon: 'trending-up' },
+  { label: 'Avg Price', value: '1.8k', icon: 'cash' },
+];
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StatsBar() {
+  return (
+    <LinearGradient colors={GRADIENTS.primary} style={styles.statsBar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+      {STATS.map((s, i) => (
+        <View key={s.label} style={[styles.statItem, i < STATS.length - 1 && styles.statDivider]}>
+          <Ionicons name={s.icon} size={18} color="rgba(255,255,255,0.8)" />
+          <Text style={styles.statValue}>{s.value}</Text>
+          <Text style={styles.statLabel}>{s.label}</Text>
+        </View>
+      ))}
+    </LinearGradient>
+  );
+}
+
+function AgentCard({ agent }) {
+  return (
+    <View style={styles.agentCard}>
+      <Image source={{ uri: agent.image }} style={styles.agentImg} />
+      <View style={styles.agentBadge}>
+        <Ionicons name="star" size={8} color="#fff" />
+        <Text style={styles.agentBadgeText}>{agent.rating}</Text>
+      </View>
+      <Text style={styles.agentName} numberOfLines={1}>{agent.name}</Text>
+      <Text style={styles.agentDeals}>{agent.deals} deals</Text>
+    </View>
+  );
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HomeScreen({ navigation }) {
+  const [quickFilter, setQuickFilter] = useState('all');
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Animated header height collapse
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [90, 0],
+    extrapolate: 'clamp',
+  });
+
+  const filteredProperties = useCallback(() => {
+    if (quickFilter === 'featured') return PROPERTIES.filter((p) => p.featured);
+    if (quickFilter === 'new')      return PROPERTIES.slice(-5);
+    if (quickFilter === 'cheap')    return PROPERTIES.filter((p) => p.price < 1000);
+    return PROPERTIES.slice(0, 6);
+  }, [quickFilter])();
+
+  const handlePropPress = useCallback(
+    (property) => navigation.navigate('PropertyDetail', { property }),
+    [navigation]
+  );
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Bonjour 👋</Text>
-            <Text style={styles.headline}>
-              Trouvez votre{"\n"}prochain chez-vous
-            </Text>
-          </View>
+      {/* ── Fixed top header ── */}
+      <View style={styles.topBar}>
+        <View>
+          <Text style={styles.greeting}>Bonjour 👋</Text>
+          <Text style={styles.headline}>Trouvez votre chez-vous</Text>
+        </View>
+        <View style={styles.topBarRight}>
+          <TouchableOpacity style={styles.notifBtn} onPress={() => navigation.navigate('Inbox')}>
+            <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
+            <View style={styles.notifDot} />
+          </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate("Profile")}
+            onPress={() => navigation.navigate('Profile')}
             activeOpacity={0.85}
+            style={styles.avatarWrap}
           >
             <Image
-              source={{
-                uri: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200",
-              }}
+              source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200' }}
               style={styles.avatar}
             />
             <View style={styles.onlineDot} />
           </TouchableOpacity>
         </View>
+      </View>
 
-        {/* ── Search ── */}
+      <Animated.ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      >
+        {/* ── Search bar ── */}
         <TouchableOpacity
           style={styles.searchBar}
-          onPress={() => navigation.navigate("Search")}
+          onPress={() => navigation.navigate('Search')}
           activeOpacity={0.9}
         >
-          <Ionicons name="search-outline" size={18} color={COLORS.textLight} />
-          <TextInput
-            placeholder="Ville, quartier, adresse…"
-            style={styles.searchInput}
-            placeholderTextColor={COLORS.textLight}
-            editable={false}
-            pointerEvents="none"
-          />
+          <View style={styles.searchInner}>
+            <Ionicons name="search-outline" size={18} color={COLORS.textLight} />
+            <Text style={styles.searchPlaceholder}>Ville, quartier, adresse…</Text>
+          </View>
           <View style={styles.filterChip}>
             <Ionicons name="options-outline" size={16} color={COLORS.primary} />
           </View>
         </TouchableOpacity>
 
+        {/* ── Stats bar ── */}
+        <StatsBar />
+
         {/* ── Categories ── */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Catégories</Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Search")}>
-            <Text style={styles.seeAll}>Voir tout</Text>
-          </TouchableOpacity>
-        </View>
+        <SectionHeader
+          title="Catégories"
+          onSeeAll={() => navigation.navigate('Search')}
+          style={styles.sectionHeader}
+        />
 
         <ScrollView
           horizontal
@@ -124,244 +181,232 @@ export default function HomeScreen({ navigation }) {
               onPress={() => cat.screen && navigation.navigate(cat.screen)}
               activeOpacity={0.8}
             >
-              <View style={styles.categoryIcon}>
-                <Ionicons name={cat.icon} size={22} color={COLORS.primary} />
+              <View style={[styles.categoryIcon, { backgroundColor: cat.bg }]}>
+                <Ionicons name={cat.icon} size={24} color={cat.color} />
               </View>
               <Text style={styles.categoryLabel}>{cat.title}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
-        {/* ── Featured ── */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Propriétés vedettes</Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Search")}>
-            <Text style={styles.seeAll}>Voir tout</Text>
-          </TouchableOpacity>
-        </View>
+        {/* ── Quick filters ── */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickFilters}
+        >
+          {QUICK_FILTERS.map((f) => (
+            <TouchableOpacity
+              key={f.id}
+              style={[styles.qfChip, quickFilter === f.id && styles.qfChipActive]}
+              onPress={() => setQuickFilter(f.id)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.qfLabel, quickFilter === f.id && styles.qfLabelActive]}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-        {FEATURED_PROPERTIES.map((prop) => (
-          <TouchableOpacity
+        {/* ── Featured properties ── */}
+        <SectionHeader
+          title="Propriétés"
+          onSeeAll={() => navigation.navigate('Search')}
+          style={styles.sectionHeader}
+        />
+
+        {filteredProperties.map((prop) => (
+          <PropertyCard
             key={prop.id}
-            style={styles.propertyCard}
-            onPress={() =>
-              navigation.navigate("PropertyDetail", { property: prop })
-            }
-            activeOpacity={0.9}
-          >
-            <Image source={{ uri: prop.image }} style={styles.propertyImage} />
-
-            {/* Gradient overlay */}
-            <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.72)"]}
-              style={styles.propertyOverlay}
-            />
-
-            {/* Price badge */}
-            <View style={styles.priceBadge}>
-              <Text style={styles.priceText}>{prop.price}</Text>
-            </View>
-
-            {/* Info */}
-            <View style={styles.propertyInfo}>
-              <Text style={styles.propertyTitle}>{prop.title}</Text>
-              <View style={styles.propertyMeta}>
-                <Ionicons
-                  name="location-outline"
-                  size={13}
-                  color="rgba(255,255,255,0.8)"
-                />
-                <Text style={styles.propertyLocation}>{prop.location}</Text>
-                <View style={styles.dot} />
-                <Ionicons
-                  name="bed-outline"
-                  size={13}
-                  color="rgba(255,255,255,0.8)"
-                />
-                <Text style={styles.propertyLocation}>{prop.beds}</Text>
-                <View style={styles.dot} />
-                <Ionicons
-                  name="water-outline"
-                  size={13}
-                  color="rgba(255,255,255,0.8)"
-                />
-                <Text style={styles.propertyLocation}>{prop.baths}</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
+            property={prop}
+            onPress={() => handlePropPress(prop)}
+          />
         ))}
-      </ScrollView>
+
+        {/* ── Top Agents ── */}
+        <SectionHeader
+          title="Agents vedettes"
+          style={styles.sectionHeader}
+        />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.agentsRow}
+        >
+          {AGENTS.map((a) => (
+            <AgentCard key={a.id} agent={a} />
+          ))}
+        </ScrollView>
+
+        {/* ── Market Insights banner ── */}
+        <TouchableOpacity
+          style={styles.insightsBanner}
+          onPress={() => navigation.navigate('MarketInsights')}
+          activeOpacity={0.9}
+        >
+          <LinearGradient
+            colors={GRADIENTS.teal}
+            style={styles.insightsGrad}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <View>
+              <Text style={styles.insightsTitle}>📊 Market Insights</Text>
+              <Text style={styles.insightsSub}>Prix moyen par ville · Tendances</Text>
+            </View>
+            <View style={styles.insightsArrow}>
+              <Ionicons name="arrow-forward" size={18} color="#fff" />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { padding: SIZES.medium, paddingBottom: 100 },
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
-  // Header
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: SIZES.large,
-    marginTop: SIZES.small,
+const styles = StyleSheet.create({
+  safe:   { flex: 1, backgroundColor: COLORS.background },
+  scroll: { paddingHorizontal: SIZES.medium, paddingBottom: 110 },
+
+  // Top bar
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SIZES.medium,
+    paddingTop: SIZES.medium,
+    paddingBottom: SIZES.small,
+    backgroundColor: COLORS.background,
   },
-  greeting: {
-    ...FONTS.body2,
-    color: COLORS.textLight,
-    marginBottom: 4,
+  greeting:  { ...FONTS.body2, color: COLORS.textLight },
+  headline:  { ...FONTS.h2, color: COLORS.text, marginTop: 2 },
+  topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  notifBtn: {
+    width: 40, height: 40,
+    borderRadius: SIZES.radius.md,
+    backgroundColor: COLORS.card,
+    justifyContent: 'center', alignItems: 'center',
+    ...SHADOWS.light,
   },
-  headline: {
-    ...FONTS.h1,
-    color: COLORS.text,
+  notifDot: {
+    position: 'absolute', top: 8, right: 8,
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: COLORS.accent,
+    borderWidth: 1.5, borderColor: COLORS.background,
   },
+  avatarWrap: { position: 'relative' },
   avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
+    width: 42, height: 42, borderRadius: 21,
+    borderWidth: 2, borderColor: COLORS.primary,
   },
   onlineDot: {
-    position: "absolute",
-    bottom: 1,
-    right: 1,
-    width: 11,
-    height: 11,
-    borderRadius: 6,
+    position: 'absolute', bottom: 1, right: 1,
+    width: 11, height: 11, borderRadius: 6,
     backgroundColor: COLORS.success,
-    borderWidth: 2,
-    borderColor: COLORS.background,
+    borderWidth: 2, borderColor: COLORS.background,
   },
 
-  // Search
+  // Search bar
   searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.card,
     borderRadius: SIZES.radius.lg,
     paddingHorizontal: SIZES.medium,
-    paddingVertical: 13,
-    marginBottom: SIZES.large,
+    paddingVertical: 12,
+    marginTop: SIZES.small,
+    marginBottom: SIZES.medium,
     gap: 10,
     ...SHADOWS.light,
   },
-  searchInput: {
-    flex: 1,
-    ...FONTS.body1,
-    color: COLORS.text,
-  },
+  searchInner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  searchPlaceholder: { ...FONTS.body1, color: COLORS.textLight },
   filterChip: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 34, height: 34, borderRadius: 10,
     backgroundColor: COLORS.primaryOpacity,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center', alignItems: 'center',
   },
+
+  // Stats bar
+  statsBar: {
+    flexDirection: 'row',
+    borderRadius: SIZES.radius.lg,
+    marginBottom: SIZES.large,
+    paddingVertical: SIZES.medium,
+    ...SHADOWS.glow,
+  },
+  statItem: {
+    flex: 1, alignItems: 'center', gap: 4,
+  },
+  statDivider: {
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(255,255,255,0.2)',
+  },
+  statValue: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  statLabel: { fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: '500', textTransform: 'uppercase' },
 
   // Section header
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SIZES.medium,
-  },
-  sectionTitle: {
-    ...FONTS.h3,
-    color: COLORS.text,
-  },
-  seeAll: {
-    ...FONTS.body2,
-    color: COLORS.primary,
-    fontWeight: "600",
-  },
+  sectionHeader: { marginTop: SIZES.small },
 
   // Categories
-  categoriesRow: {
-    paddingBottom: SIZES.large,
-    gap: 12,
-  },
-  categoryCard: {
-    alignItems: "center",
-    gap: 8,
-    marginRight: 4,
-  },
+  categoriesRow: { paddingBottom: SIZES.large, gap: 12 },
+  categoryCard: { alignItems: 'center', gap: 8, marginRight: 4 },
   categoryIcon: {
-    width: 60,
-    height: 60,
+    width: 64, height: 64,
     borderRadius: SIZES.radius.lg,
-    backgroundColor: COLORS.primaryOpacity,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center', alignItems: 'center',
     ...SHADOWS.xs,
   },
-  categoryLabel: {
-    ...FONTS.caption,
-    color: COLORS.text,
-    fontWeight: "600",
-  },
+  categoryLabel: { ...FONTS.caption, color: COLORS.text, fontWeight: '600' },
 
-  // Property card
-  propertyCard: {
-    height: 220,
-    borderRadius: SIZES.radius.xl,
-    overflow: "hidden",
-    marginBottom: SIZES.medium,
-    backgroundColor: COLORS.card,
-    ...SHADOWS.medium,
-  },
-  propertyImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  propertyOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: "65%",
-  },
-  priceBadge: {
-    position: "absolute",
-    top: 14,
-    right: 14,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  // Quick filters
+  quickFilters: { gap: 8, paddingBottom: SIZES.large },
+  qfChip: {
+    paddingHorizontal: 16, paddingVertical: 8,
     borderRadius: SIZES.radius.pill,
+    backgroundColor: COLORS.card,
+    borderWidth: 1.5, borderColor: 'transparent',
+    ...SHADOWS.xs,
   },
-  priceText: {
-    ...FONTS.caption,
-    color: "#fff",
-    fontWeight: "700",
+  qfChipActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryOpacity,
   },
-  propertyInfo: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
+  qfLabel:       { ...FONTS.caption, color: COLORS.textLight, fontWeight: '600' },
+  qfLabelActive: { color: COLORS.primary },
+
+  // Agents
+  agentsRow: { gap: 14, paddingBottom: SIZES.large },
+  agentCard: { alignItems: 'center', width: 90, gap: 4 },
+  agentImg: {
+    width: 68, height: 68, borderRadius: 34,
+    borderWidth: 2, borderColor: COLORS.primaryOpacity,
   },
-  propertyTitle: {
-    ...FONTS.h3,
-    color: "#fff",
-    marginBottom: 5,
+  agentBadge: {
+    position: 'absolute', top: 44, right: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    backgroundColor: '#FFC107', borderRadius: 10,
+    paddingHorizontal: 5, paddingVertical: 2,
+    borderWidth: 1.5, borderColor: '#fff',
   },
-  propertyMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
+  agentBadgeText: { fontSize: 9, fontWeight: '700', color: '#fff' },
+  agentName: { ...FONTS.caption, color: COLORS.text, fontWeight: '600', textAlign: 'center' },
+  agentDeals: { fontSize: 10, color: COLORS.textLight, textAlign: 'center' },
+
+  // Market Insights banner
+  insightsBanner: { borderRadius: SIZES.radius.lg, overflow: 'hidden', marginTop: SIZES.small, ...SHADOWS.medium },
+  insightsGrad: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: SIZES.medium,
   },
-  propertyLocation: {
-    ...FONTS.caption,
-    color: "rgba(255,255,255,0.85)",
-  },
-  dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.5)",
+  insightsTitle: { ...FONTS.h3, color: '#fff' },
+  insightsSub:   { ...FONTS.caption, color: 'rgba(255,255,255,0.8)', marginTop: 3 },
+  insightsArrow: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center',
   },
 });
