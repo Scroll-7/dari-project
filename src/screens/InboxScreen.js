@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Animated,
+  ActivityIndicator,
   FlatList,
   SafeAreaView,
   StatusBar,
@@ -13,162 +12,75 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { getAuth } from 'firebase/auth';
+import { subscribeToConversations } from '../firebase/chat';
 import { useConversations } from '../context/ConversationContext';
-import { Avatar } from '../components/Avatar';
 import { COLORS, FONTS, SHADOWS, SIZES } from '../constants/theme';
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+const ACCENT = COLORS.primary;
 
-const BINOME_REQUESTS = [
-  {
-    id: 'br1',
-    name: 'Karim Aissani',
-    initials: 'KA',
-    color: '#4B5BF5',
-    bgColor: '#EEF0FF',
-    major: 'Computer Science student',
-    sentAt: '5m ago',
-  },
-];
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const CHATS = [
-  { id: 'c1', name: 'Sara Benali',    initials: 'SB', color: '#D85A30', bgColor: '#FFD6CC', lastMessage: 'Is the apartment still available?',    time: '2m ago',   unread: 2, online: true,  isBinome: false, type: 'property' },
-  { id: 'c2', name: 'Youssef Mansour', initials: 'YM', color: '#185FA5', bgColor: '#D6EDFF', lastMessage: 'Sure, we can schedule a visit',         time: '1h ago',   unread: 0, online: false, isBinome: false, type: 'roommate' },
-  { id: 'c3', name: 'Rania Lakhal',   initials: 'RL', color: '#0F6E56', bgColor: '#E1F5EE', lastMessage: "Let's split the utilities 50/50",       time: 'Yesterday', unread: 0, online: true,  isBinome: true,  type: 'roommate' },
-  { id: 'c4', name: 'Ahmed Hamdi',    initials: 'AH', color: '#BA7517', bgColor: '#FFF0D6', lastMessage: 'The landlord confirmed the price',       time: 'Mon',       unread: 0, online: false, isBinome: false, type: 'property' },
-  { id: 'c5', name: 'Lina Dridi',     initials: 'LD', color: '#993556', bgColor: '#FBEAF0', lastMessage: 'Can we meet this weekend?',              time: 'Sun',       unread: 1, online: false, isBinome: false, type: 'roommate' },
-];
+function getInitials(name = '') {
+  return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
+}
 
-// Online-first contacts (for story-style row)
-const STORIES = CHATS.filter((c) => c.online).slice(0, 5);
+const AVATAR_COLORS = ['#4461F2','#E83E8C','#20C997','#FD7E14','#6F42C1','#FFC107','#D85A30'];
+function pickColor(name = '') {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + h * 31;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
 
-const FILTERS = ['All', 'Roommates', 'Property'];
+function formatTime(date) {
+  if (!date) return '';
+  const now = new Date();
+  const d = date instanceof Date ? date : new Date(date);
+  const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (diffDays === 1) return 'Hier';
+  if (diffDays < 7) return d.toLocaleDateString('fr-FR', { weekday: 'short' });
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+// ─── Tag chip ─────────────────────────────────────────────────────────────────
 
 const TAG_CONFIG = {
-  'binome-actuel':  { label: 'Binôme', bg: '#E1F5EE', color: '#0F6E56' },
-  'demande-binome': { label: 'Roommate', bg: '#EEF0FF', color: '#4B5BF5' },
-  service:          { label: 'Service', bg: '#FFF3E0', color: '#E65100' },
-  property:         { label: 'Propriété', bg: '#E8F4FD', color: '#0077B6' },
+  service:  { label: 'Service',  bg: '#FFF3E0', color: '#E65100' },
+  firebase: { label: 'Message', bg: '#EEF2FF', color: '#4F46E5' },
 };
-function resolveTag(item) {
-  if (item.isBinome) return 'binome-actuel';
-  if (item.type === 'service' || item.tag === 'service') return 'service';
-  if (item.type === 'roommate') return 'demande-binome';
-  if (item.type === 'property') return 'property';
-  return null;
-}
-
-// ── Typing indicator ──────────────────────────────────────────────────────────
-function TypingDots() {
-  const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
-
-  useEffect(() => {
-    const anim = (dot, delay) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(dot, { toValue: -5, duration: 250, useNativeDriver: true }),
-          Animated.timing(dot, { toValue: 0, duration: 250, useNativeDriver: true }),
-        ])
-      ).start();
-    dots.forEach((d, i) => anim(d, i * 150));
-  }, []);
-
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 }}>
-      {dots.map((d, i) => (
-        <Animated.View key={i} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: COLORS.textLight, transform: [{ translateY: d }] }} />
-      ))}
-    </View>
-  );
-}
 
 // ─── Chat Row ─────────────────────────────────────────────────────────────────
 
-function ChatRow({ item, onPress, typing }) {
-  const key  = resolveTag(item);
-  const tag  = key ? TAG_CONFIG[key] : null;
+function ChatRow({ item, onPress }) {
+  const name = item.name || item.otherName || 'Utilisateur';
+  const color = item.avatarColor || pickColor(name);
+  const initials = item.initials || getInitials(name);
+  const preview = item.lastMessage || 'Démarrez la conversation…';
+  const timeStr = item.time || (item.lastTime ? formatTime(item.lastTime) : '');
+  const tagKey = item.tag || 'firebase';
+  const tag = TAG_CONFIG[tagKey];
 
   return (
-    <TouchableOpacity style={styles.chatRow} onPress={() => onPress(item)}>
-      <Avatar
-        initials={item.initials}
-        color={item.color ?? item.avatarColor}
-        bgColor={item.bgColor}
-        size={48}
-        onlineDot={item.online}
-      />
+    <TouchableOpacity style={styles.chatRow} onPress={() => onPress(item)} activeOpacity={0.7}>
+      <View style={[styles.avatar, { backgroundColor: color + '22' }]}>
+        <Text style={[styles.avatarText, { color }]}>{initials}</Text>
+      </View>
       <View style={styles.chatInfo}>
-        <View style={styles.chatRowTop}>
+        <View style={styles.chatTop}>
           <View style={styles.chatNameRow}>
-            <Text style={styles.chatName} numberOfLines={1}>{item.name}</Text>
+            <Text style={styles.chatName} numberOfLines={1}>{name}</Text>
             {tag && (
               <View style={[styles.tagChip, { backgroundColor: tag.bg }]}>
                 <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
               </View>
             )}
           </View>
-          <Text style={styles.chatTime}>{item.time}</Text>
+          <Text style={styles.chatTime}>{timeStr}</Text>
         </View>
-        {typing
-          ? <TypingDots />
-          : <Text style={[styles.chatPreview, item.unread > 0 && styles.chatPreviewBold]} numberOfLines={1}>{item.lastMessage}</Text>
-        }
+        <Text style={styles.chatPreview} numberOfLines={1}>{preview}</Text>
       </View>
-      {item.unread > 0 && (
-        <View style={styles.unreadBadge}>
-          <Text style={styles.unreadText}>{item.unread}</Text>
-        </View>
-      )}
     </TouchableOpacity>
-  );
-}
-
-// ─── Stories Row ─────────────────────────────────────────────────────────────
-
-function StoriesRow({ chats }) {
-  return (
-    <View style={styles.storiesWrap}>
-      <Text style={styles.storiesLabel}>En ligne</Text>
-      <View style={styles.storiesRow}>
-        {chats.map((c) => (
-          <View key={c.id} style={styles.storyItem}>
-            <View style={styles.storyRing}>
-              <Avatar initials={c.initials} color={c.color} bgColor={c.bgColor} size={44} />
-            </View>
-            <Text style={styles.storyName} numberOfLines={1}>{c.name.split(' ')[0]}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-// ─── Binome Request ───────────────────────────────────────────────────────────
-
-function BinomeCard({ request, onAccept, onDecline }) {
-  return (
-    <View style={styles.binomeCard}>
-      <View style={styles.binomeHeader}>
-        <View style={styles.binomeDot} />
-        <Text style={styles.binomeLabel}>ROOMMATE REQUEST</Text>
-      </View>
-      <View style={styles.binomeBody}>
-        <Avatar initials={request.initials} color={request.color} bgColor={request.bgColor} size={42} />
-        <View style={styles.binomeInfo}>
-          <Text style={styles.binomeName}>{request.name}</Text>
-          <Text style={styles.binomeSub} numberOfLines={1}>{request.major} · {request.sentAt}</Text>
-        </View>
-        <View style={styles.binomeBtns}>
-          <TouchableOpacity style={styles.decBtn} onPress={() => onDecline(request.id)}>
-            <Text style={styles.decBtnText}>✕</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.accBtn} onPress={() => onAccept(request.id)}>
-            <Text style={styles.accBtnText}>✓</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
   );
 }
 
@@ -176,65 +88,99 @@ function BinomeCard({ request, onAccept, onDecline }) {
 
 export default function InboxScreen() {
   const navigation = useNavigation();
-  const { conversations } = useConversations();
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [search, setSearch]             = useState('');
-  const [requests, setRequests]         = useState(BINOME_REQUESTS);
-  const [typingId] = useState('c1'); // mock: c1 is "typing"
+  const myUid = getAuth().currentUser?.uid;
+  const { conversations: localConvs } = useConversations();
 
-  const handleChatPress = (chat) =>
-    navigation.navigate('Chat', { personId: chat.personId ?? chat.id });
+  const [firebaseConvs, setFirebaseConvs] = useState([]);
+  const [loadingFb, setLoadingFb] = useState(true);
+  const [search, setSearch] = useState('');
 
-  const contextIds  = new Set(conversations.map((c) => c.personId));
-  const mockAsConv  = CHATS.filter((c) => !contextIds.has(c.id)).map((c) => ({
-    ...c, personId: c.id, avatarColor: c.color,
-  }));
-  const allChats = [
-    ...conversations.map((c) => ({
-      ...c,
-      time: new Date(c.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      type: c.tag === 'roommate' ? 'roommate' : 'service',
-      isBinome: false,
-    })),
-    ...mockAsConv,
-  ];
+  // Subscribe to real Firebase conversations
+  useEffect(() => {
+    if (!myUid) { setLoadingFb(false); return; }
+    const unsub = subscribeToConversations(myUid, (convs) => {
+      setFirebaseConvs(convs);
+      setLoadingFb(false);
+    });
+    return unsub;
+  }, [myUid]);
 
-  const filteredChats = allChats.filter((c) => {
-    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase());
-    if (!matchSearch) return false;
-    if (activeFilter === 'Roommates') return c.type === 'roommate';
-    if (activeFilter === 'Property')  return c.type === 'property';
-    return true;
+  // Map local ConversationContext entries (service providers) to display format.
+  // These only exist if the user actually tapped the chat button on a provider.
+  const localChatsDisplay = localConvs.map((conv) => {
+    const last = conv.messages?.length
+      ? conv.messages[conv.messages.length - 1]
+      : null;
+    return {
+      id: conv.id,
+      personId: conv.personId,
+      name: conv.name,
+      initials: conv.initials || getInitials(conv.name),
+      avatarColor: conv.avatarColor,
+      lastMessage: last
+        ? (last.fromSelf ? `Vous: ${last.text}` : last.text)
+        : (conv.lastMessage || 'Démarrez la conversation…'),
+      time: last
+        ? new Date(last.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '',
+      tag: 'service',
+      isLocal: true,
+    };
   });
 
-  const totalUnread = allChats.reduce((acc, c) => acc + (c.unread ?? 0), 0);
+  // Convert Firebase convs to display format
+  const fbChatsDisplay = firebaseConvs.map((c) => ({
+    ...c,
+    name: c.otherName,
+    initials: getInitials(c.otherName),
+    avatarColor: pickColor(c.otherName),
+    tag: 'firebase',
+    isLocal: false,
+  }));
 
-  // Animated tab indicator
-  const indicatorPos = useRef(new Animated.Value(0)).current;
-  const TAB_WIDTH = 100;
-  const handleFilter = (f, i) => {
-    setActiveFilter(f);
-    Animated.spring(indicatorPos, { toValue: i * TAB_WIDTH, useNativeDriver: false, tension: 200, friction: 18 }).start();
+  // Combine: service provider chats the user started + real Firebase convs
+  const allChats = [...localChatsDisplay, ...fbChatsDisplay];
+
+  const filtered = allChats.filter((c) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (c.name || '').toLowerCase().includes(q) ||
+           (c.otherUsername || '').toLowerCase().includes(q);
+  });
+
+  const handleChatPress = (item) => {
+    if (item.isLocal) {
+      // Open local ConversationContext-based chat (service providers)
+      navigation.navigate('Chat', { personId: item.personId });
+    } else {
+      // Open real Firebase chat
+      navigation.navigate('Chat', {
+        otherUid: item.otherUid,
+        otherName: item.otherName,
+        otherUsername: item.otherUsername || '',
+      });
+    }
   };
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
+      {/* ── Header ── */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Inbox</Text>
-          {totalUnread > 0 && (
-            <Text style={styles.headerSub}>{totalUnread} non lus</Text>
-          )}
+          <Text style={styles.headerTitle}>Messages</Text>
+          <Text style={styles.headerSub}>{allChats.length} conversation{allChats.length !== 1 ? 's' : ''}</Text>
         </View>
-        <TouchableOpacity style={styles.composeBtn}>
+        <TouchableOpacity
+          style={styles.composeBtn}
+          onPress={() => navigation.navigate('NewChat')}
+        >
           <Ionicons name="create-outline" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* Search */}
+      {/* ── Search ── */}
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={16} color={COLORS.textLight} />
         <TextInput
@@ -251,70 +197,66 @@ export default function InboxScreen() {
         )}
       </View>
 
-      {/* Stories row */}
-      {STORIES.length > 0 && <StoriesRow chats={STORIES} />}
-
-      {/* Filter tabs with animated underline */}
-      <View style={styles.tabsContainer}>
-        <View style={styles.tabsRow}>
-          {FILTERS.map((f, i) => (
-            <TouchableOpacity key={f} style={[styles.tab, { width: TAB_WIDTH }]} onPress={() => handleFilter(f, i)}>
-              <Text style={[styles.tabText, activeFilter === f && styles.tabTextActive]}>{f}</Text>
-            </TouchableOpacity>
-          ))}
+      {/* ── Content ── */}
+      {loadingFb ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={ACCENT} size="large" />
         </View>
-        <Animated.View style={[styles.tabIndicator, { left: indicatorPos, width: TAB_WIDTH }]} />
-      </View>
-
-      <FlatList
-        data={filteredChats}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={
-          requests.length > 0 ? (
-            <View style={styles.requestsSection}>
-              {requests.map((r) => (
-                <BinomeCard
-                  key={r.id}
-                  request={r}
-                  onAccept={(id) => setRequests((p) => p.filter((x) => x.id !== id))}
-                  onDecline={(id) => setRequests((p) => p.filter((x) => x.id !== id))}
-                />
-              ))}
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(c) => c.id}
+          renderItem={({ item }) => <ChatRow item={item} onPress={handleChatPress} />}
+          ItemSeparatorComponent={() => <View style={styles.sep} />}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.center}>
+              <Ionicons name="chatbubbles-outline" size={64} color="#ddd" />
+              <Text style={styles.emptyTitle}>Aucun résultat</Text>
+              <Text style={styles.emptyHint}>Essayez un autre nom</Text>
             </View>
-          ) : null
-        }
-        renderItem={({ item }) => (
-          <ChatRow item={item} onPress={handleChatPress} typing={item.id === typingId} />
-        )}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+          }
+          ListFooterComponent={
+            fbChatsDisplay.length === 0 ? (
+              <TouchableOpacity
+                style={styles.newChatBanner}
+                onPress={() => navigation.navigate('NewChat')}
+              >
+                <Ionicons name="person-add-outline" size={20} color={ACCENT} />
+                <Text style={styles.newChatBannerText}>
+                  Discuter avec un autre utilisateur de l'app
+                </Text>
+                <Ionicons name="chevron-forward" size={18} color={ACCENT} />
+              </TouchableOpacity>
+            ) : null
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const ACCENT = COLORS.primary;
-
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10, padding: 24, marginTop: 40 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#555', marginTop: 8 },
+  emptyHint: { fontSize: 14, color: '#aaa', textAlign: 'center' },
 
-  // Header
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,
     borderBottomWidth: 1, borderBottomColor: COLORS.line,
   },
   headerTitle: { fontSize: 26, fontWeight: '700', color: '#111', letterSpacing: -0.5 },
-  headerSub:   { ...FONTS.caption, color: COLORS.primary, marginTop: 2 },
+  headerSub: { ...FONTS.caption, color: ACCENT, marginTop: 2 },
   composeBtn: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center',
   },
 
-  // Search
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: COLORS.card,
@@ -325,76 +267,30 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, ...FONTS.body1, color: COLORS.text },
 
-  // Stories
-  storiesWrap:  { paddingHorizontal: SIZES.medium, paddingBottom: SIZES.small },
-  storiesLabel: { ...FONTS.caption, color: COLORS.textLight, marginBottom: 8, fontWeight: '600', textTransform: 'uppercase' },
-  storiesRow:   { flexDirection: 'row', gap: 14 },
-  storyItem:    { alignItems: 'center', gap: 4 },
-  storyRing: {
-    width: 52, height: 52, borderRadius: 26,
-    borderWidth: 2.5, borderColor: ACCENT,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  storyName: { fontSize: 10, color: COLORS.textLight, fontWeight: '600' },
+  listContent: { paddingBottom: 20 },
+  sep: { height: 1, backgroundColor: '#f5f5f5', marginLeft: 74 },
 
-  // Tabs
-  tabsContainer: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: COLORS.line },
-  tabsRow:       { flexDirection: 'row' },
-  tab:           { paddingVertical: 12, alignItems: 'center' },
-  tabText:       { fontSize: 13, fontWeight: '600', color: COLORS.textLight },
-  tabTextActive: { color: ACCENT },
-  tabIndicator: {
-    position: 'absolute', bottom: 0, height: 2.5,
-    backgroundColor: ACCENT, borderRadius: 2,
-  },
-
-  // List
-  listContent:    { paddingBottom: 20 },
-  requestsSection:{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4, gap: 10 },
-
-  // Binome card
-  binomeCard: {
-    backgroundColor: '#EEF0FF', borderRadius: 14,
-    padding: 14, borderWidth: 1, borderColor: '#c7ccf7',
-  },
-  binomeHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  binomeDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: ACCENT },
-  binomeLabel:  { fontSize: 10, fontWeight: '700', color: ACCENT, letterSpacing: 0.5 },
-  binomeBody:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  binomeInfo:   { flex: 1 },
-  binomeName:   { fontSize: 14, fontWeight: '600', color: '#111' },
-  binomeSub:    { fontSize: 12, color: '#666', marginTop: 2 },
-  binomeBtns:   { flexDirection: 'row', gap: 8 },
-  decBtn: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  decBtnText: { fontSize: 14, color: '#999', fontWeight: '700' },
-  accBtn: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center',
-  },
-  accBtnText: { fontSize: 14, color: '#fff', fontWeight: '700' },
-
-  // Chat row
   chatRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', paddingHorizontal: SIZES.medium, paddingVertical: 12, gap: 12,
+    backgroundColor: '#fff', paddingHorizontal: SIZES.medium, paddingVertical: 13, gap: 12,
   },
+  avatar: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 18, fontWeight: '700' },
   chatInfo: { flex: 1, minWidth: 0 },
-  chatRowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  chatNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
-  chatName: { fontSize: 15, fontWeight: '600', color: '#111' },
-  tagChip:  { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  tagText:  { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
-  chatTime: { fontSize: 11, color: '#888' },
-  chatPreview:     { fontSize: 13, color: '#888', marginTop: 2 },
-  chatPreviewBold: { color: '#444', fontWeight: '500' },
-  unreadBadge: {
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center',
+  chatTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  chatNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 4 },
+  chatName: { fontSize: 15, fontWeight: '600', color: '#111', flexShrink: 1 },
+  tagChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  tagText: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  chatTime: { fontSize: 11, color: '#aaa', flexShrink: 0 },
+  chatPreview: { fontSize: 13, color: '#888', marginTop: 3 },
+
+  newChatBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    margin: SIZES.medium,
+    backgroundColor: COLORS.primaryOpacity,
+    borderRadius: SIZES.radius.lg, padding: SIZES.medium,
+    borderWidth: 1, borderColor: COLORS.primary + '30',
   },
-  unreadText: { fontSize: 11, fontWeight: '700', color: '#fff' },
-  separator:  { height: 1, backgroundColor: '#f5f5f5', marginLeft: 76 },
+  newChatBannerText: { flex: 1, ...FONTS.body2, color: ACCENT, fontWeight: '600' },
 });

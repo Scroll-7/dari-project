@@ -49,9 +49,9 @@ export default function LoginScreen({ navigation }) {
         style={styles.keyboardView}
       >
         <View style={styles.headerContainer}>
-          <Text style={styles.title}>dari</Text>
+          <Text style={styles.title}>Welcome To Dari !</Text>
           <Text style={styles.subtitle}>
-            Welcome back! Please enter your details to find your next home.
+            Unlocking doors to your perfect home, ideal roommates, and essential services.
           </Text>
         </View>
 
@@ -124,21 +124,11 @@ export default function LoginScreen({ navigation }) {
             </LinearGradient>
           </TouchableOpacity>
 
-          <View style={styles.socialContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.socialText}>Or continue with</Text>
-            <View style={styles.divider} />
+          <View style={styles.welcomeFooter}>
+            <Text style={styles.welcomeFooterText}>
+              Welcome! Please enter your details to find your next home.
+            </Text>
           </View>
-
-          <TouchableOpacity style={styles.googleBtn}>
-            <Ionicons
-              name="logo-google"
-              size={20}
-              color={COLORS.text}
-              style={{ marginRight: 10 }}
-            />
-            <Text style={styles.googleBtnText}>Sign in with Google</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
@@ -155,91 +145,96 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   keyboardView: { flex: 1, justifyContent: "center", padding: SIZES.large },
-  headerContainer: { marginBottom: SIZES.xxl, alignItems: "center" },
+  headerContainer: { marginBottom: 40, alignItems: "center" },
   title: {
-    fontSize: 48,
-    fontWeight: "bold",
+    fontSize: 34,
+    fontWeight: "800",
     color: COLORS.primary,
-    letterSpacing: -1,
-    marginBottom: 8,
+    letterSpacing: -0.5,
+    marginBottom: 16,
+    textAlign: "center",
   },
   subtitle: {
     ...FONTS.body1,
-    color: COLORS.textLight,
+    fontSize: 15,
+    color: "#64748B",
     textAlign: "center",
-    paddingHorizontal: SIZES.large,
+    paddingHorizontal: 16,
+    lineHeight: 22,
+    fontWeight: "400",
   },
   formContainer: {
     backgroundColor: COLORS.white,
-    padding: SIZES.large,
+    padding: 28,
     borderRadius: 24,
+    paddingBottom: 36,
     ...SHADOWS.medium,
   },
   errorText: {
     color: 'red',
-    marginBottom: SIZES.medium,
+    marginBottom: 20,
     textAlign: 'center',
     fontWeight: '600',
   },
-  inputLabel: { ...FONTS.h3, color: COLORS.text, marginBottom: 8 },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    color: "#475569",
+    marginBottom: 10,
+    marginLeft: 4,
+  },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-    marginBottom: SIZES.medium,
-    paddingHorizontal: SIZES.small,
-    height: 50,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    marginBottom: 24,
+    paddingHorizontal: 16,
+    height: 54,
   },
-  inputIcon: { marginRight: 8 },
-  input: { flex: 1, height: "100%", ...FONTS.body1, color: COLORS.text },
+  inputIcon: { marginRight: 12, color: "#94A3B8" },
+  input: { flex: 1, height: "100%", fontSize: 15, color: "#1E293B", fontWeight: "500" },
   eyeIcon: { padding: 8 },
-  forgotPassword: { alignSelf: "flex-end", marginBottom: SIZES.xl },
+  forgotPassword: { alignSelf: "flex-end", marginBottom: 28 },
   forgotPasswordText: {
-    ...FONTS.body2,
+    fontSize: 13,
     color: COLORS.primary,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   loginBtn: {
     borderRadius: 16,
     overflow: "hidden",
     ...SHADOWS.medium,
-    marginBottom: SIZES.xl,
+    shadowColor: COLORS.primary,
+    marginBottom: 24,
   },
-  loginGradient: { height: 56, justifyContent: "center", alignItems: "center" },
-  loginBtnText: { ...FONTS.h3, color: COLORS.white, fontWeight: "bold" },
-  socialContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: SIZES.xl,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.textLight,
-    opacity: 0.2,
-  },
-  socialText: {
-    paddingHorizontal: 16,
-    ...FONTS.body2,
-    color: COLORS.textLight,
-  },
-  googleBtn: {
-    flexDirection: "row",
-    height: 56,
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  googleBtnText: { ...FONTS.h3, color: COLORS.text, fontWeight: "600" },
+  loginGradient: { height: 58, justifyContent: "center", alignItems: "center" },
+  loginBtnText: { fontSize: 16, color: "#FFFFFF", fontWeight: "800", letterSpacing: 0.5 },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: SIZES.xxl,
+    marginTop: 32,
   },
-  footerText: { ...FONTS.body1, color: COLORS.textLight },
-  signupText: { ...FONTS.body1, color: COLORS.primary, fontWeight: "bold" },
+  footerText: { fontSize: 14, color: "#64748B", fontWeight: "500" },
+  signupText: { fontSize: 14, color: COLORS.primary, fontWeight: "800" },
+  welcomeFooter: {
+    marginTop: 16,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9", // extremely soft divider
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  welcomeFooterText: {
+    ...FONTS.body2,
+    fontSize: 14,
+    color: "#94A3B8",
+    textAlign: "center",
+    lineHeight: 22,
+    fontStyle: "italic",
+  },
 });

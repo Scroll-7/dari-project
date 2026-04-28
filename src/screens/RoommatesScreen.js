@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   SafeAreaView,
@@ -13,10 +15,14 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useConversations } from '../context/ConversationContext';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { getOrCreateConversation } from '../firebase/chat';
 import { FilterPill } from '../components/FilterPill';
 import { StarRating } from '../components/StarRating';
 import { COLORS, FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+
+const db = getFirestore();
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -135,14 +141,40 @@ function CompatRing({ score }) {
 // ─── RoommateCard ─────────────────────────────────────────────────────────────
 
 function RoommateCard({ item, onPress, onChat }) {
+  const initials = item.name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
+  const AVATAR_COLORS = ['#4461F2','#E83E8C','#20C997','#FD7E14','#6F42C1','#FFC107'];
+  const pickColor = (name = '') => {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + h * 31;
+    return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+  };
+  const avatarColor = pickColor(item.name);
+
+  const CardContainer = item.isReal ? View : TouchableOpacity;
+
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.88}>
-      {/* Left: photo */}
+    <CardContainer 
+      style={styles.card} 
+      onPress={item.isReal ? undefined : onPress} 
+      activeOpacity={item.isReal ? undefined : 0.88}
+    >
+      {/* Left: photo or initials */}
       <View style={styles.photoWrap}>
-        <Image source={{ uri: item.image }} style={styles.photo} />
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.photo} />
+        ) : (
+          <View style={[styles.photo, styles.photoInitials, { backgroundColor: avatarColor + '22' }]}>
+            <Text style={[styles.photoInitialsText, { color: avatarColor }]}>{initials}</Text>
+          </View>
+        )}
         {item.recommended && (
           <View style={styles.recDot}>
             <Ionicons name="star" size={9} color="#fff" />
+          </View>
+        )}
+        {item.isReal && (
+          <View style={styles.realBadge}>
+            <Text style={styles.realBadgeText}>Réel</Text>
           </View>
         )}
       </View>
@@ -157,22 +189,27 @@ function RoommateCard({ item, onPress, onChat }) {
             </View>
           )}
         </View>
-        <Text style={styles.role}>{item.role} · {item.age} ans · {item.city}</Text>
-        <StarRating rating={item.rating} size={11} />
-
-        {/* Interest pills */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll} contentContainerStyle={{ gap: 5, paddingTop: 6 }}>
-          {item.interests.slice(0, 3).map((int) => (
-            <View key={int} style={styles.interestPill}>
-              <Text style={styles.interestText}>{int}</Text>
-            </View>
-          ))}
-        </ScrollView>
+        <Text style={styles.role} numberOfLines={2}>
+          {item.role}{item.age ? ` · ${item.age} ans` : ''}{item.city ? ` · ${item.city}` : ''}
+        </Text>
+        {item.rating != null && <StarRating rating={item.rating} size={11} />}
+        {item.budget ? (
+          <Text style={styles.budgetText}>💰 {item.budget}</Text>
+        ) : null}
+        {item.interests?.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll} contentContainerStyle={{ gap: 5, paddingTop: 6 }}>
+            {item.interests.slice(0, 3).map((int) => (
+              <View key={int} style={styles.interestPill}>
+                <Text style={styles.interestText}>{int}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       {/* Right: compat + chat */}
       <View style={styles.rightCol}>
-        <CompatRing score={item.compatibility} />
+        {item.compatibility != null && <CompatRing score={item.compatibility} />}
         <TouchableOpacity
           style={styles.chatBtn}
           onPress={(e) => { e.stopPropagation?.(); onChat(item); }}
@@ -181,7 +218,7 @@ function RoommateCard({ item, onPress, onChat }) {
           <Ionicons name="chatbubble-ellipses" size={16} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </CardContainer>
   );
 }
 
@@ -189,18 +226,80 @@ function RoommateCard({ item, onPress, onChat }) {
 
 export default function RoommatesScreen() {
   const navigation = useNavigation();
-  const { openOrCreateConversation } = useConversations();
-  const [filter, setFilter] = useState('all'); // 'all' | 'recommended' | 'high_compat'
+  const myUid = getAuth().currentUser?.uid;
+  const [filter, setFilter] = useState('all');
+  const [realPosts, setRealPosts] = useState([]);
+  const [loadingReal, setLoadingReal] = useState(true);
 
-  const handleChat = (item) => {
-    openOrCreateConversation({ id: `roommate_${item.id}`, name: item.name, tag: 'roommate' });
-    navigation.navigate('Chat', { personId: `roommate_${item.id}` });
+  // Subscribe to real Firestore roommate posts
+  useEffect(() => {
+    const q = query(collection(db, 'roommatePosts'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snap) => {
+      const posts = snap.docs
+        .map((d) => ({ firestoreId: d.id, ...d.data() }))
+        // Don't show the current user's own post
+        .filter((p) => p.uid !== myUid);
+      setRealPosts(posts);
+      setLoadingReal(false);
+    });
+    return unsub;
+  }, [myUid]);
+
+  // Convert Firestore posts to the card format
+  const realAsCards = realPosts.map((p) => ({
+    id: `real_${p.firestoreId}`,
+    uid: p.uid,
+    name: p.name || 'Utilisateur',
+    username: p.username || '',
+    role: p.description?.slice(0, 50) || 'Cherche colocation',
+    age: null,
+    city: p.city || '',
+    compatibility: null,         // no algo for real posts
+    recommended: false,
+    rating: null,
+    image: null,                 // no image for now
+    bio: p.description || '',
+    budget: p.budget || '',
+    interests: p.interests || [],
+    habits: p.habits || [],
+    experiences: [],
+    isReal: true,                // flag to distinguish from mock
+  }));
+
+  // Combine: real posts first, then mock
+  const combined = [...realAsCards, ...ROOMMATES.map((r) => ({ ...r, isReal: false }))];
+
+  const handleChat = async (item) => {
+    if (item.isReal) {
+      try {
+        if (!myUid) {
+          Alert.alert('Erreur', 'Vous n\'êtes pas connecté.');
+          return;
+        }
+        if (!item.uid) {
+          Alert.alert('Erreur', 'L\'utilisateur n\'a pas d\'ID.');
+          return;
+        }
+        await getOrCreateConversation(myUid, item.uid);
+        navigation.navigate('Chat', {
+          otherUid: item.uid,
+          otherName: item.name,
+          otherUsername: item.username,
+        });
+      } catch (e) {
+        console.error('Chat error:', e);
+        Alert.alert('Erreur', e.message);
+      }
+    } else {
+      // Mock roommate → keep existing local behavior
+      navigation.navigate('Chat', { personId: `roommate_${item.id}` });
+    }
   };
 
   const data =
-    filter === 'recommended' ? ROOMMATES.filter((r) => r.recommended) :
-    filter === 'high_compat' ? ROOMMATES.filter((r) => r.compatibility >= 85) :
-    ROOMMATES;
+    filter === 'recommended' ? combined.filter((r) => r.recommended) :
+    filter === 'high_compat'  ? combined.filter((r) => r.compatibility >= 85) :
+    combined;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -227,25 +326,29 @@ export default function RoommatesScreen() {
 
       {/* ── Filter pills ── */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: SIZES.medium }}>
-        <FilterPill label="Tous" active={filter === 'all'}         onPress={() => setFilter('all')} />
+        <FilterPill label="Tous"           active={filter === 'all'}         onPress={() => setFilter('all')} />
         <FilterPill label="⭐ Recommandés" active={filter === 'recommended'} onPress={() => setFilter('recommended')} />
-        <FilterPill label="🔥 > 85%" active={filter === 'high_compat'} onPress={() => setFilter('high_compat')} />
+        <FilterPill label="🔥 > 85%"       active={filter === 'high_compat'} onPress={() => setFilter('high_compat')} />
       </ScrollView>
 
       {/* ── List ── */}
-      <FlatList
-        data={data}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <RoommateCard
-            item={item}
-            onPress={() => navigation.navigate('RoommateProfile', { roommate: item })}
-            onChat={handleChat}
-          />
-        )}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
+      {loadingReal ? (
+        <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={data}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <RoommateCard
+              item={item}
+              onPress={() => !item.isReal && navigation.navigate('RoommateProfile', { roommate: item })}
+              onChat={handleChat}
+            />
+          )}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -292,6 +395,8 @@ const styles = StyleSheet.create({
 
   photoWrap: { position: 'relative' },
   photo: { width: 70, height: 70, borderRadius: SIZES.radius.lg },
+  photoInitials: { justifyContent: 'center', alignItems: 'center' },
+  photoInitialsText: { fontSize: 24, fontWeight: '800' },
   recDot: {
     position: 'absolute', bottom: -2, right: -2,
     width: 18, height: 18, borderRadius: 9,
@@ -299,6 +404,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 2, borderColor: COLORS.card,
   },
+  realBadge: {
+    position: 'absolute', top: -4, left: -4,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 5, paddingVertical: 2,
+    borderRadius: 6,
+  },
+  realBadgeText: { fontSize: 8, color: '#fff', fontWeight: '800' },
+  budgetText: { fontSize: 11, color: COLORS.textLight, marginTop: 3 },
 
   info: { flex: 1, minWidth: 0 },
   nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginBottom: 3 },

@@ -12,6 +12,7 @@ export default function SettingsScreen({ navigation }) {
   const { user, updateUser } = useUser();
 
   const [name, setName]   = useState(user.name);
+  const [username, setUsername] = useState(user.username || '');
   const [email, setEmail] = useState(user.email);
   const [phone, setPhone] = useState(user.phone);
   const [city, setCity]   = useState(user.city);
@@ -33,7 +34,7 @@ export default function SettingsScreen({ navigation }) {
   };
 
   const handleSave = async () => {
-    await updateUser({ name, email, phone, city, photo });
+    await updateUser({ name, username, email, phone, city, photo });
     Alert.alert('Saved', 'Your profile has been updated.', [
       { text: 'OK', onPress: () => navigation.goBack() }
     ]);
@@ -69,6 +70,7 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Personal Information</Text>
           <Field label="Full Name" value={name}  onChange={setName}  icon="person-outline" />
+          <Field label="Username"  value={username} onChange={setUsername} icon="at-outline" />
           <Field label="Email"     value={email} onChange={setEmail} icon="mail-outline"   keyboardType="email-address" />
           <Field label="Phone"     value={phone} onChange={setPhone} icon="call-outline"   keyboardType="phone-pad" />
           <Field label="City"      value={city}  onChange={setCity}  icon="location-outline" />

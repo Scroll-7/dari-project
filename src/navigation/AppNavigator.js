@@ -9,8 +9,10 @@ import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 
 import { AuthProvider, AuthContext } from '../context/AuthContext';
 import { ConversationProvider } from '../context/ConversationContext';
-import { ThemeProvider } from '../context/ThemeContext';
+import { COLORS, GRADIENTS, SHADOWS } from '../constants/theme';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { FavoritesProvider } from '../context/FavoritesContext';
+import { UserProvider } from '../context/UserContext';
 
 import ApartmentsScreen        from '../screens/ApartmentsScreen';
 import ChatScreen              from '../screens/ChatScreen';
@@ -33,8 +35,12 @@ import SearchScreen            from '../screens/SearchScreen';
 import ServiceProvidersScreen  from '../screens/ServiceProvidersScreen';
 import ServicesScreen          from '../screens/ServicesScreen';
 import SettingsScreen          from '../screens/SettingsScreen';
+import WelcomeUsernameScreen   from '../screens/WelcomeUsernameScreen';
+import PostPropertyScreen      from '../screens/PostPropertyScreen';
+import PostRequestScreen       from '../screens/PostRequestScreen';
+import NewChatScreen           from '../screens/NewChatScreen';
+import { useUser }             from '../context/UserContext';
 
-import { COLORS, GRADIENTS, SHADOWS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator();
 const Tab   = createBottomTabNavigator();
@@ -52,11 +58,17 @@ const TABS = [
 // ─── Custom tab bar ───────────────────────────────────────────────────────────
 
 function CustomTabBar({ state, descriptors, navigation }) {
+  const { user } = useUser();
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
+
   return (
     <View style={styles.tabBarWrap}>
       <View style={styles.tabBar}>
         {state.routes.map((route, index) => {
-          const cfg      = TABS[index];
+          const cfg      = TABS.find(t => t.name === route.name);
+          if (!cfg) return null;
+          
           const focused  = state.index === index;
           const isFAB    = cfg.name === 'ADD';
 
@@ -67,7 +79,14 @@ function CustomTabBar({ state, descriptors, navigation }) {
                 key={route.key}
                 style={styles.fabWrap}
                 activeOpacity={0.9}
-                onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  if (user?.role === 'landlord') {
+                    navigation.navigate('PostProperty');
+                  } else {
+                    navigation.navigate('PostRequest');
+                  }
+                }}
               >
                 <LinearGradient colors={GRADIENTS.primary} style={styles.fab} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                   <Ionicons name="add" size={28} color="#fff" />
@@ -93,7 +112,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
               activeOpacity={0.8}
             >
               <View style={[styles.tabIconWrap, focused && styles.tabIconWrapActive]}>
-                <Ionicons name={iconName} size={22} color={focused ? COLORS.primary : COLORS.textLight} />
+                <Ionicons name={iconName} size={22} color={focused ? colors.primary : colors.textLight} />
                 {cfg.badge && !focused && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>{cfg.badge}</Text>
@@ -118,13 +137,17 @@ function PlaceholderScreen() { return null; }
 // ─── Main tabs ────────────────────────────────────────────────────────────────
 
 function MainTabs() {
+  const { user } = useUser();
+
   return (
     <Tab.Navigator
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Home"      component={HomeScreen} />
-      <Tab.Screen name="Roommates" component={RoommatesScreen} />
+      {user?.role !== 'landlord' && (
+        <Tab.Screen name="Roommates" component={RoommatesScreen} />
+      )}
       <Tab.Screen name="ADD"       component={PlaceholderScreen} />
       <Tab.Screen name="Inbox"     component={InboxScreen} />
       <Tab.Screen name="Services"  component={ServicesScreen} />
@@ -134,7 +157,7 @@ function MainTabs() {
 
 // ─── App Navigator Content (Consumes AuthContext) ──────────────────────────────
 function AppNavigatorContent() {
-  const { user, isLoading } = React.useContext(AuthContext);
+  const { user, isLoading, hasUsername } = React.useContext(AuthContext);
 
   if (isLoading) {
     // Return an empty view or a splash screen while checking auth state
@@ -150,8 +173,13 @@ function AppNavigatorContent() {
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
           </>
+        ) : !hasUsername ? (
+          // Authenticated but username not yet chosen → onboarding
+          <>
+            <Stack.Screen name="WelcomeUsername" component={WelcomeUsernameScreen} />
+          </>
         ) : (
-          // Authenticated screens
+          // Fully set-up authenticated screens
           <>
             <Stack.Screen name="Main"             component={MainTabs} />
             <Stack.Screen name="Search"           component={SearchScreen} />
@@ -169,6 +197,9 @@ function AppNavigatorContent() {
             <Stack.Screen name="MarketInsights"   component={MarketInsightsScreen} />
             <Stack.Screen name="RoommateProfile"  component={RoommateProfileScreen} />
             <Stack.Screen name="Chat"             component={ChatScreen} />
+            <Stack.Screen name="NewChat"          component={NewChatScreen} />
+            <Stack.Screen name="PostProperty"     component={PostPropertyScreen} />
+            <Stack.Screen name="PostRequest"      component={PostRequestScreen} />
           </>
         )}
       </Stack.Navigator>
@@ -184,7 +215,9 @@ export default function AppNavigator() {
       <ThemeProvider>
         <FavoritesProvider>
           <ConversationProvider>
-            <AppNavigatorContent />
+            <UserProvider>
+              <AppNavigatorContent />
+            </UserProvider>
           </ConversationProvider>
         </FavoritesProvider>
       </ThemeProvider>
@@ -194,15 +227,15 @@ export default function AppNavigator() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   // Tab bar container
   tabBarWrap: {
     paddingHorizontal: 12,
     paddingBottom: 10,
     paddingTop: 6,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: COLORS.line,
+    borderTopColor: colors.line,
     ...SHADOWS.medium,
   },
   tabBar: {
@@ -225,15 +258,15 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   tabIconWrapActive: {
-    backgroundColor: COLORS.primaryOpacity,
+    backgroundColor: colors.primaryOpacity,
   },
   tabLabel: {
     fontSize: 10,
-    color: COLORS.textLight,
+    color: colors.textLight,
     fontWeight: '500',
   },
   tabLabelActive: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '700',
   },
 
@@ -241,9 +274,9 @@ const styles = StyleSheet.create({
   badge: {
     position: 'absolute', top: 2, right: 2,
     width: 16, height: 16, borderRadius: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: COLORS.card,
+    borderWidth: 1.5, borderColor: colors.card,
   },
   badgeText: { fontSize: 9, fontWeight: '700', color: '#fff' },
 
