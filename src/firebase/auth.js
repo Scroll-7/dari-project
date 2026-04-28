@@ -65,4 +65,4 @@ export const logoutUser = async () => {
   }
 };
 
-export { auth };
+export { auth, db };

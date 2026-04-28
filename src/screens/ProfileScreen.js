@@ -23,13 +23,13 @@ import { PROPERTIES } from '../constants/mockData';
 
 // ─── Static config ────────────────────────────────────────────────────────────
 
-const MENU = [
-  { icon: 'heart-outline',         label: 'Saved Properties',  screen: 'SavedProperties', color: COLORS.rose },
-  { icon: 'document-text-outline', label: 'My Listings',       screen: 'MyListings',      color: COLORS.primary },
-  { icon: 'bar-chart-outline',    label: 'Market Insights',   screen: 'MarketInsights',  color: COLORS.teal },
-  { icon: 'settings-outline',      label: 'Settings',          screen: 'Settings',        color: COLORS.textLight },
-  { icon: 'help-circle-outline',   label: 'Help & Support',    screen: 'Help',            color: COLORS.gold },
-  { icon: 'log-out-outline',       label: 'Log Out',           screen: null,              color: COLORS.error },
+const getMenu = (colors) => [
+  { icon: 'heart-outline',         label: 'Saved Properties',  screen: 'SavedProperties', color: colors.rose },
+  { icon: 'document-text-outline', label: 'My Listings',       screen: 'MyListings',      color: colors.primary },
+  { icon: 'bar-chart-outline',    label: 'Market Insights',   screen: 'MarketInsights',  color: colors.teal },
+  { icon: 'settings-outline',      label: 'Settings',          screen: 'Settings',        color: colors.textLight },
+  { icon: 'help-circle-outline',   label: 'Help & Support',    screen: 'Help',            color: colors.gold },
+  { icon: 'log-out-outline',       label: 'Log Out',           screen: null,              color: colors.error },
 ];
 
 const BADGES = [
@@ -42,20 +42,30 @@ const BADGES = [
 
 export default function ProfileScreen({ navigation }) {
   const { user }              = useUser();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme, colors } = useTheme();
   const { getFavoriteIds }    = useFavorites();
   const [showEdit, setShowEdit] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? '');
   const [editCity, setEditCity] = useState(user?.city ?? '');
 
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
+  const menuList = React.useMemo(() => getMenu(colors), [colors]);
+
   const savedCount    = getFavoriteIds().length;
   const listingsCount = PROPERTIES.filter((p) => p.featured).length;
 
-  const handlePress = (item) => {
+  const handlePress = async (item) => {
     if (!item.screen) {
       Alert.alert('Log Out', 'Are you sure you want to log out?', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Log Out', style: 'destructive', onPress: () => {} },
+        { 
+          text: 'Log Out', 
+          style: 'destructive', 
+          onPress: async () => {
+            const { logoutUser } = await import('../firebase/auth');
+            await logoutUser();
+          } 
+        },
       ]);
       return;
     }
@@ -69,7 +79,7 @@ export default function ProfileScreen({ navigation }) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
         {/* ── Gradient header ── */}
-        <LinearGradient colors={GRADIENTS.primary} style={styles.gradHeader} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <LinearGradient colors={colors.gradientPrimary || GRADIENTS.primary} style={styles.gradHeader} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
@@ -91,17 +101,20 @@ export default function ProfileScreen({ navigation }) {
             </View>
           )}
           <Text style={styles.name}>{user?.name ?? 'Utilisateur'}</Text>
+          {!!user?.username && (
+            <Text style={styles.username}>@{user.username}</Text>
+          )}
           <Text style={styles.email}>{user?.email ?? 'email@dari.tn'}</Text>
           <View style={styles.locChip}>
-            <Ionicons name="location-outline" size={13} color={COLORS.primary} />
-            <Text style={styles.locText}>{user?.city ?? 'Tunis'}, Tunisia</Text>
+            <Ionicons name="location-outline" size={13} color={colors.primary} />
+            <Text style={styles.locText}>{user?.city || 'Tunis'}, Tunisia</Text>
           </View>
         </View>
 
         {/* ── Badges ── */}
         <View style={styles.badgesRow}>
           {BADGES.map((b) => (
-            <View key={b.label} style={[styles.badge, { backgroundColor: b.bg }]}>
+            <View key={b.label} style={[styles.badge, { backgroundColor: isDark ? '#1E1B4B' : b.bg }]}>
               <Ionicons name={b.icon} size={16} color={b.color} />
               <Text style={[styles.badgeLabel, { color: b.color }]}>{b.label}</Text>
             </View>
@@ -125,30 +138,30 @@ export default function ProfileScreen({ navigation }) {
         {/* ── Dark mode toggle ── */}
         <View style={styles.darkModeRow}>
           <View style={styles.darkModeLeft}>
-            <View style={[styles.menuIcon, { backgroundColor: '#1E1B4B' }]}>
-              <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={18} color="#818CF8" />
+            <View style={[styles.menuIcon, { backgroundColor: isDark ? colors.primaryOpacity : '#EEF2FF' }]}>
+              <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={18} color={colors.primary} />
             </View>
             <Text style={styles.menuLabel}>Mode sombre</Text>
           </View>
           <Switch
             value={isDark}
             onValueChange={toggleTheme}
-            trackColor={{ false: COLORS.line, true: COLORS.primary }}
+            trackColor={{ false: colors.line, true: colors.primary }}
             thumbColor="#fff"
           />
         </View>
 
         {/* ── Menu items ── */}
         <View style={styles.menuList}>
-          {MENU.map((item, i) => (
+          {menuList.map((item, i) => (
             <TouchableOpacity key={i} style={styles.menuItem} onPress={() => handlePress(item)}>
               <View style={[styles.menuIcon, { backgroundColor: item.color + '18' }]}>
                 <Ionicons name={item.icon} size={18} color={item.color} />
               </View>
-              <Text style={[styles.menuLabel, item.screen === null && { color: COLORS.error }]}>
+              <Text style={[styles.menuLabel, item.screen === null && { color: colors.error }]}>
                 {item.label}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color={COLORS.line} />
+              <Ionicons name="chevron-forward" size={16} color={colors.line} />
             </TouchableOpacity>
           ))}
         </View>
@@ -168,7 +181,7 @@ export default function ProfileScreen({ navigation }) {
               value={editName}
               onChangeText={setEditName}
               placeholder="Votre nom"
-              placeholderTextColor={COLORS.textLight}
+              placeholderTextColor={colors.textLight}
             />
             <Text style={styles.fieldLabel}>Ville</Text>
             <TextInput
@@ -176,11 +189,11 @@ export default function ProfileScreen({ navigation }) {
               value={editCity}
               onChangeText={setEditCity}
               placeholder="Votre ville"
-              placeholderTextColor={COLORS.textLight}
+              placeholderTextColor={colors.textLight}
             />
 
             <TouchableOpacity style={styles.saveBtn} onPress={() => setShowEdit(false)}>
-              <LinearGradient colors={GRADIENTS.primary} style={styles.saveGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              <LinearGradient colors={colors.gradientPrimary || GRADIENTS.primary} style={styles.saveGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
                 <Text style={styles.saveText}>Enregistrer</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -196,8 +209,8 @@ export default function ProfileScreen({ navigation }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: COLORS.background },
+const getStyles = (colors) => StyleSheet.create({
+  safe:    { flex: 1, backgroundColor: colors.background },
   scroll:  { paddingBottom: 40 },
 
   // Gradient header
@@ -221,7 +234,7 @@ const styles = StyleSheet.create({
   // Profile card
   profileCard: {
     alignItems: 'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     marginHorizontal: SIZES.medium,
     borderRadius: SIZES.radius.xl,
     paddingTop: 40,
@@ -232,27 +245,28 @@ const styles = StyleSheet.create({
   },
   avatarCircle: {
     width: 84, height: 84, borderRadius: 42,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     justifyContent: 'center', alignItems: 'center',
     marginBottom: SIZES.medium,
-    borderWidth: 4, borderColor: '#fff',
+    borderWidth: 4, borderColor: colors.card,
     ...SHADOWS.glow,
   },
   avatarInitials: { fontSize: 32, fontWeight: '700', color: '#fff' },
   avatarImg: {
     width: 84, height: 84, borderRadius: 42,
     marginBottom: SIZES.medium,
-    borderWidth: 4, borderColor: '#fff',
+    borderWidth: 4, borderColor: colors.card,
   },
-  name:  { ...FONTS.h2, color: COLORS.text },
-  email: { ...FONTS.body2, color: COLORS.textLight, marginTop: 4 },
+  name:  { ...FONTS.h2, color: colors.text },
+  username: { ...FONTS.body2, color: colors.primary, fontWeight: '600', marginTop: 2 },
+  email: { ...FONTS.body2, color: colors.textLight, marginTop: 4 },
   locChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: COLORS.primaryOpacity,
+    backgroundColor: colors.primaryOpacity,
     paddingHorizontal: 12, paddingVertical: 5,
     borderRadius: SIZES.radius.pill, marginTop: SIZES.small,
   },
-  locText: { ...FONTS.caption, color: COLORS.primary, fontWeight: '600' },
+  locText: { ...FONTS.caption, color: colors.primary, fontWeight: '600' },
 
   // Badges
   badgesRow: {
@@ -269,34 +283,34 @@ const styles = StyleSheet.create({
   // Stats
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     marginHorizontal: SIZES.medium,
     borderRadius: SIZES.radius.lg,
     padding: SIZES.medium, marginTop: SIZES.medium,
     ...SHADOWS.light,
   },
   statItem: { flex: 1, alignItems: 'center' },
-  statValue: { ...FONTS.h2, color: COLORS.primary },
-  statLabel: { ...FONTS.caption, color: COLORS.textLight, marginTop: 2 },
+  statValue: { ...FONTS.h2, color: colors.primary },
+  statLabel: { ...FONTS.caption, color: colors.textLight, marginTop: 2 },
 
   // Dark mode row
   darkModeRow: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     marginHorizontal: SIZES.medium,
     borderRadius: SIZES.radius.lg,
     paddingHorizontal: SIZES.medium, paddingVertical: 14,
     marginTop: SIZES.medium,
     ...SHADOWS.xs,
   },
-  darkModeLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  darkModeLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
 
   // Menu
   menuList: { marginHorizontal: SIZES.medium, marginTop: SIZES.medium, gap: SIZES.small },
   menuItem: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius: SIZES.radius.lg, padding: SIZES.medium,
     ...SHADOWS.xs,
   },
@@ -304,31 +318,31 @@ const styles = StyleSheet.create({
     width: 38, height: 38, borderRadius: SIZES.radius.sm,
     justifyContent: 'center', alignItems: 'center',
   },
-  menuLabel: { flex: 1, ...FONTS.body1, color: COLORS.text, fontWeight: '500' },
+  menuLabel: { flex: 1, ...FONTS.body1, color: colors.text, fontWeight: '500' },
 
   // Edit modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   modalSheet: {
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: SIZES.large, paddingBottom: 40,
   },
   handle: {
     width: 40, height: 4, borderRadius: 2,
-    backgroundColor: COLORS.line,
+    backgroundColor: colors.line,
     alignSelf: 'center', marginBottom: SIZES.medium,
   },
-  modalTitle: { ...FONTS.h2, color: COLORS.text, marginBottom: SIZES.large },
-  fieldLabel: { ...FONTS.label, color: COLORS.textLight, marginBottom: 6, marginTop: SIZES.small },
+  modalTitle: { ...FONTS.h2, color: colors.text, marginBottom: SIZES.large },
+  fieldLabel: { ...FONTS.label, color: colors.textLight, marginBottom: 6, marginTop: SIZES.small },
   fieldInput: {
-    backgroundColor: COLORS.inputBg,
+    backgroundColor: colors.inputBg,
     borderRadius: SIZES.radius.md, paddingHorizontal: 14, paddingVertical: 12,
-    ...FONTS.body1, color: COLORS.text,
-    borderWidth: 1.5, borderColor: COLORS.border,
+    ...FONTS.body1, color: colors.text,
+    borderWidth: 1.5, borderColor: colors.border,
   },
   saveBtn:  { borderRadius: SIZES.radius.lg, overflow: 'hidden', marginTop: SIZES.large, ...SHADOWS.glow },
   saveGrad: { paddingVertical: 16, alignItems: 'center' },
   saveText: { ...FONTS.h3, color: '#fff' },
   cancelBtn: { alignItems: 'center', marginTop: SIZES.medium },
-  cancelText: { ...FONTS.body1, color: COLORS.textLight },
+  cancelText: { ...FONTS.body1, color: colors.textLight },
 });
