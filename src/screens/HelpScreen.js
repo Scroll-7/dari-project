@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, LayoutAnimation } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 const FAQS = [
   { q: 'How do I post a property?', a: 'Go to My Listings and tap "Post a Property". Fill in the details and submit.' },
@@ -11,6 +12,8 @@ const FAQS = [
 ];
 
 export default function HelpScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [open, setOpen] = useState(null);
 
   const toggle = (i) => {
@@ -22,7 +25,7 @@ export default function HelpScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color="#333" />
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Help & Support</Text>
         <View style={{ width: 22 }} />
@@ -38,8 +41,8 @@ export default function HelpScreen({ navigation }) {
               <Text style={styles.contactBtnText}>Call Us</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.contactBtn, styles.contactBtnFill]}>
-              <Ionicons name="mail-outline" size={16} color="#fff" />
-              <Text style={[styles.contactBtnText, { color: '#fff' }]}>Email Us</Text>
+              <Ionicons name="mail-outline" size={16} color={colors.white} />
+              <Text style={[styles.contactBtnText, { color: colors.white }]}>Email Us</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -49,7 +52,7 @@ export default function HelpScreen({ navigation }) {
           <TouchableOpacity key={i} style={styles.faqItem} onPress={() => toggle(i)}>
             <View style={styles.faqRow}>
               <Text style={styles.faqQ}>{item.q}</Text>
-              <Ionicons name={open === i ? 'chevron-up' : 'chevron-down'} size={16} color="#888" />
+              <Ionicons name={open === i ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textLight} />
             </View>
             {open === i && <Text style={styles.faqA}>{item.a}</Text>}
           </TouchableOpacity>
@@ -59,21 +62,25 @@ export default function HelpScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F5F7FA' },
+const getStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
-  title: { fontSize: 17, fontWeight: '700', color: '#222' },
+  title: { fontSize: 17, fontWeight: '700', color: colors.text },
   scroll: { padding: 16 },
-  contactCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 24, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6 },
-  contactTitle: { fontSize: 16, fontWeight: '700', color: '#222', marginTop: 10 },
-  contactSub: { fontSize: 12, color: '#888', textAlign: 'center', marginTop: 6, marginBottom: 16 },
+  contactCard: { backgroundColor: colors.card, borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 24, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6 },
+  contactTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: 10 },
+  contactSub: { fontSize: 12, color: colors.textLight, textAlign: 'center', marginTop: 6, marginBottom: 16 },
   contactRow: { flexDirection: 'row', gap: 12 },
   contactBtn: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#4461F2', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
   contactBtnFill: { backgroundColor: '#4461F2', borderColor: '#4461F2' },
   contactBtnText: { fontSize: 13, fontWeight: '600', color: '#4461F2', marginLeft: 6 },
-  faqTitle: { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 12 },
-  faqItem: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4 },
+  faqTitle: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 12 },
+  faqItem: { backgroundColor: colors.card, borderRadius: 12, padding: 14, marginBottom: 10, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4 },
   faqRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  faqQ: { fontSize: 13, fontWeight: '600', color: '#333', flex: 1, marginRight: 8 },
-  faqA: { fontSize: 13, color: '#666', marginTop: 10, lineHeight: 20 },
+  faqQ: { fontSize: 13, fontWeight: '600', color: colors.text, flex: 1, marginRight: 8 },
+  faqA: { fontSize: 13, color: colors.textLight, marginTop: 10, lineHeight: 20 },
 });
+
+
+
+

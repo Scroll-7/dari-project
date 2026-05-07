@@ -16,7 +16,8 @@ import {
 import PropertyCard from '../components/PropertyCard';
 import { FilterPill } from '../components/FilterPill';
 import { PROPERTIES, CITIES } from '../constants/mockData';
-import { COLORS, FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 // ─── Static config ────────────────────────────────────────────────────────────
 
@@ -48,6 +49,8 @@ const RECENT_SEARCHES = ['Tunis', 'La Marsa', 'Sfax', 'Sousse'];
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function SearchScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [query, setQuery]           = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [priceIdx, setPriceIdx]     = useState(0);
@@ -93,20 +96,20 @@ export default function SearchScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       {/* ── Search header ── */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
 
         <View style={styles.inputWrap}>
-          <Ionicons name="search" size={16} color={COLORS.textLight} style={{ marginRight: 6 }} />
+          <Ionicons name="search" size={16} color={colors.textLight} style={{ marginRight: 6 }} />
           <TextInput
             style={styles.input}
             placeholder="Ville, quartier, adresse…"
-            placeholderTextColor={COLORS.textLight}
+            placeholderTextColor={colors.textLight}
             value={query}
             onChangeText={(t) => { setQuery(t); setShowSuggs(true); }}
             onFocus={() => setShowSuggs(true)}
@@ -115,14 +118,14 @@ export default function SearchScreen({ navigation }) {
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={16} color={COLORS.textLight} />
+              <Ionicons name="close-circle" size={16} color={colors.textLight} />
             </TouchableOpacity>
           )}
         </View>
 
         {/* Filter button with badge */}
         <TouchableOpacity style={styles.filterBtn} onPress={() => setShowFilter(true)}>
-          <Ionicons name="options-outline" size={20} color={COLORS.primary} />
+          <Ionicons name="options-outline" size={20} color={colors.primary} />
           {activeFiltersCount > 0 && (
             <View style={styles.filterBadge}>
               <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
@@ -140,7 +143,7 @@ export default function SearchScreen({ navigation }) {
               style={styles.suggItem}
               onPress={() => { setQuery(city); setShowSuggs(false); }}
             >
-              <Ionicons name="location-outline" size={14} color={COLORS.textLight} />
+              <Ionicons name="location-outline" size={14} color={colors.textLight} />
               <Text style={styles.suggText}>{city}</Text>
             </TouchableOpacity>
           ))}
@@ -152,7 +155,7 @@ export default function SearchScreen({ navigation }) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentRow} contentContainerStyle={{ gap: 8, paddingHorizontal: SIZES.medium }}>
           {RECENT_SEARCHES.map((r) => (
             <TouchableOpacity key={r} style={styles.recentChip} onPress={() => setQuery(r)}>
-              <Ionicons name="time-outline" size={12} color={COLORS.textLight} />
+              <Ionicons name="time-outline" size={12} color={colors.textLight} />
               <Text style={styles.recentText}>{r}</Text>
             </TouchableOpacity>
           ))}
@@ -181,10 +184,10 @@ export default function SearchScreen({ navigation }) {
         <Text style={styles.resultCount}>{results.length} propriétés</Text>
         <View style={styles.viewToggle}>
           <TouchableOpacity onPress={() => setViewMode('list')} style={[styles.toggleBtn, viewMode === 'list' && styles.toggleBtnActive]}>
-            <Ionicons name="list-outline" size={18} color={viewMode === 'list' ? COLORS.primary : COLORS.textLight} />
+            <Ionicons name="list-outline" size={18} color={viewMode === 'list' ? colors.primary : colors.textLight} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setViewMode('grid')} style={[styles.toggleBtn, viewMode === 'grid' && styles.toggleBtnActive]}>
-            <Ionicons name="grid-outline" size={18} color={viewMode === 'grid' ? COLORS.primary : COLORS.textLight} />
+            <Ionicons name="grid-outline" size={18} color={viewMode === 'grid' ? colors.primary : colors.textLight} />
           </TouchableOpacity>
         </View>
       </View>
@@ -199,7 +202,7 @@ export default function SearchScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="home-outline" size={56} color={COLORS.line} />
+            <Ionicons name="home-outline" size={56} color={colors.line} />
             <Text style={styles.emptyTitle}>Aucune propriété trouvée</Text>
             <Text style={styles.emptySub}>Modifiez vos filtres ou cherchez une autre ville</Text>
           </View>
@@ -259,59 +262,59 @@ export default function SearchScreen({ navigation }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
+const getStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
 
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: SIZES.medium, paddingVertical: 12, gap: 8,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   back: { padding: 4 },
   inputWrap: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.card, borderRadius: SIZES.radius.lg,
+    backgroundColor: colors.card, borderRadius: SIZES.radius.lg,
     paddingHorizontal: 14, paddingVertical: 11,
     ...SHADOWS.light,
   },
-  input: { flex: 1, ...FONTS.body1, color: COLORS.text },
+  input: { flex: 1, ...FONTS.body1, color: colors.text },
   filterBtn: {
     width: 44, height: 44, borderRadius: SIZES.radius.md,
-    backgroundColor: COLORS.primaryOpacity,
+    backgroundColor: colors.primaryOpacity,
     justifyContent: 'center', alignItems: 'center',
     position: 'relative',
   },
   filterBadge: {
     position: 'absolute', top: 6, right: 6,
     width: 16, height: 16, borderRadius: 8,
-    backgroundColor: COLORS.accent,
+    backgroundColor: colors.accent,
     justifyContent: 'center', alignItems: 'center',
   },
-  filterBadgeText: { fontSize: 9, color: '#fff', fontWeight: '700' },
+  filterBadgeText: { fontSize: 9, color: colors.white, fontWeight: '700' },
 
   // Suggestions
   suggestions: {
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     marginHorizontal: SIZES.medium, borderRadius: SIZES.radius.md,
     ...SHADOWS.medium, zIndex: 100,
   },
   suggItem: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: SIZES.medium, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: COLORS.line,
+    borderBottomWidth: 1, borderBottomColor: colors.line,
   },
-  suggText: { ...FONTS.body1, color: COLORS.text },
+  suggText: { ...FONTS.body1, color: colors.text },
 
   // Recent searches
   recentRow: { marginVertical: 8 },
   recentChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: COLORS.card, borderRadius: SIZES.radius.pill,
+    backgroundColor: colors.card, borderRadius: SIZES.radius.pill,
     paddingHorizontal: 12, paddingVertical: 7,
-    borderWidth: 1, borderColor: COLORS.line,
+    borderWidth: 1, borderColor: colors.line,
   },
-  recentText: { ...FONTS.caption, color: COLORS.textLight },
+  recentText: { ...FONTS.caption, color: colors.textLight },
 
   // Type filter row
   typeRow: { marginBottom: 8 },
@@ -321,13 +324,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: SIZES.medium, paddingBottom: 8,
   },
-  resultCount: { ...FONTS.body2, color: COLORS.textLight },
+  resultCount: { ...FONTS.body2, color: colors.textLight },
   viewToggle: { flexDirection: 'row', gap: 4 },
   toggleBtn: {
     width: 34, height: 34, borderRadius: SIZES.radius.sm,
     justifyContent: 'center', alignItems: 'center',
   },
-  toggleBtnActive: { backgroundColor: COLORS.primaryOpacity },
+  toggleBtnActive: { backgroundColor: colors.primaryOpacity },
 
   // List
   list:     { paddingHorizontal: SIZES.medium, paddingBottom: 100 },
@@ -336,35 +339,36 @@ const styles = StyleSheet.create({
 
   // Empty
   empty: { alignItems: 'center', marginTop: 60, paddingHorizontal: SIZES.xl },
-  emptyTitle: { ...FONTS.h3, color: COLORS.textLight, marginTop: 16 },
-  emptySub: { ...FONTS.body2, color: COLORS.textLight, textAlign: 'center', marginTop: 6 },
+  emptyTitle: { ...FONTS.h3, color: colors.textLight, marginTop: 16 },
+  emptySub: { ...FONTS.body2, color: colors.textLight, textAlign: 'center', marginTop: 6 },
 
   // Modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   modalSheet: {
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: SIZES.large, paddingBottom: 40,
     ...SHADOWS.medium,
   },
   handle: {
     width: 40, height: 4, borderRadius: 2,
-    backgroundColor: COLORS.line,
+    backgroundColor: colors.line,
     alignSelf: 'center', marginBottom: SIZES.medium,
   },
-  modalTitle: { ...FONTS.h2, color: COLORS.text, marginBottom: SIZES.large },
-  filterLabel: { ...FONTS.label, color: COLORS.textLight, marginBottom: SIZES.small, marginTop: SIZES.medium },
+  modalTitle: { ...FONTS.h2, color: colors.text, marginBottom: SIZES.large },
+  filterLabel: { ...FONTS.label, color: colors.textLight, marginBottom: SIZES.small, marginTop: SIZES.medium },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 
   // Modal buttons
   modalBtns: { flexDirection: 'row', gap: 12, marginTop: SIZES.large },
   resetBtn: {
     flex: 1, paddingVertical: 14, borderRadius: SIZES.radius.lg,
-    borderWidth: 1.5, borderColor: COLORS.border,
+    borderWidth: 1.5, borderColor: colors.border,
     alignItems: 'center',
   },
-  resetText: { ...FONTS.body1, color: COLORS.text, fontWeight: '600' },
+  resetText: { ...FONTS.body1, color: colors.text, fontWeight: '600' },
   applyBtn:  { flex: 2, borderRadius: SIZES.radius.lg, overflow: 'hidden', ...SHADOWS.glow },
   applyGrad: { paddingVertical: 14, alignItems: 'center' },
-  applyText: { ...FONTS.body1, color: '#fff', fontWeight: '700' },
+  applyText: { ...FONTS.body1, color: colors.white, fontWeight: '700' },
 });
+

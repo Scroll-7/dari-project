@@ -11,11 +11,14 @@ import {
   getFirestore, collection, addDoc, serverTimestamp, doc, updateDoc
 } from 'firebase/firestore';
 import { useUser } from '../context/UserContext';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../constants/theme';
+import { FONTS, SIZES, SHADOWS } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 const db = getFirestore();
 
 export default function PostRequestScreen({ route, navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { user } = useUser();
   const editPost = route.params?.editPost;
   const isEditing = !!editPost;
@@ -87,7 +90,7 @@ export default function PostRequestScreen({ route, navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="close" size={28} color={COLORS.text} />
+            <Ionicons name="close" size={28} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.title}>{isEditing ? 'Modifier annonce' : 'Recherche colocation'}</Text>
           <TouchableOpacity
@@ -96,7 +99,7 @@ export default function PostRequestScreen({ route, navigation }) {
             onPress={handlePost}
           >
             {posting
-              ? <ActivityIndicator color="#fff" size="small" />
+              ? <ActivityIndicator color={colors.white} size="small" />
               : <Text style={styles.postBtnText}>{isEditing ? 'Enregistrer' : 'Publier'}</Text>
             }
           </TouchableOpacity>
@@ -115,7 +118,7 @@ export default function PostRequestScreen({ route, navigation }) {
             <View>
               <Text style={styles.userName}>{user?.name || user?.username || 'Chercheur'}</Text>
               <View style={styles.privacyPill}>
-                <Ionicons name="globe-outline" size={12} color={COLORS.textLight} />
+                <Ionicons name="globe-outline" size={12} color={colors.textLight} />
                 <Text style={styles.privacyText}>Visible par tous</Text>
               </View>
             </View>
@@ -125,7 +128,7 @@ export default function PostRequestScreen({ route, navigation }) {
           <TextInput
             style={styles.input}
             placeholder="Décrivez ce que vous cherchez : type de logement, coloc idéal, quartier préféré…"
-            placeholderTextColor={COLORS.textLight}
+            placeholderTextColor={colors.textLight}
             multiline
             autoFocus
             value={description}
@@ -135,21 +138,21 @@ export default function PostRequestScreen({ route, navigation }) {
           {/* Budget & City fields */}
           <View style={styles.fieldsRow}>
             <View style={styles.fieldWrap}>
-              <Ionicons name="cash-outline" size={16} color={COLORS.primary} style={styles.fieldIcon} />
+              <Ionicons name="cash-outline" size={16} color={colors.primary} style={styles.fieldIcon} />
               <TextInput
                 style={styles.fieldInput}
                 placeholder="Budget (ex: 400–600 DT)"
-                placeholderTextColor={COLORS.textLight}
+                placeholderTextColor={colors.textLight}
                 value={budget}
                 onChangeText={setBudget}
               />
             </View>
             <View style={styles.fieldWrap}>
-              <Ionicons name="location-outline" size={16} color={COLORS.primary} style={styles.fieldIcon} />
+              <Ionicons name="location-outline" size={16} color={colors.primary} style={styles.fieldIcon} />
               <TextInput
                 style={styles.fieldInput}
                 placeholder="Ville (ex: Tunis)"
-                placeholderTextColor={COLORS.textLight}
+                placeholderTextColor={colors.textLight}
                 value={city}
                 onChangeText={setCity}
               />
@@ -166,7 +169,7 @@ export default function PostRequestScreen({ route, navigation }) {
                     style={styles.removeImgBtn}
                     onPress={() => setImages(images.filter((_, i) => i !== index))}
                   >
-                    <Ionicons name="close-circle" size={24} color="#fff" />
+                    <Ionicons name="close-circle" size={24} color={colors.white} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -186,51 +189,51 @@ export default function PostRequestScreen({ route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.white },
+const getStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.card },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: SIZES.medium, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: COLORS.line,
+    borderBottomWidth: 1, borderBottomColor: colors.line,
   },
   backBtn: { width: 40, height: 40, justifyContent: 'center' },
-  title: { ...FONTS.h3, color: COLORS.text, fontWeight: '700' },
+  title: { ...FONTS.h3, color: colors.text, fontWeight: '700' },
   postBtn: {
-    backgroundColor: COLORS.primary, paddingHorizontal: 16,
+    backgroundColor: colors.primary, paddingHorizontal: 16,
     paddingVertical: 8, borderRadius: 20, minWidth: 72, alignItems: 'center',
   },
-  postBtnText: { color: '#fff', fontWeight: 'bold' },
+  postBtnText: { color: colors.white, fontWeight: 'bold' },
 
   content: { padding: SIZES.medium },
   userInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: SIZES.large },
   avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12 },
   avatarPlaceholder: {
     width: 48, height: 48, borderRadius: 24, marginRight: 12,
-    backgroundColor: COLORS.primaryOpacity, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.primaryOpacity, justifyContent: 'center', alignItems: 'center',
   },
-  avatarInitial: { fontSize: 20, fontWeight: 'bold', color: COLORS.primary },
-  userName: { ...FONTS.h3, color: COLORS.text, marginBottom: 2 },
+  avatarInitial: { fontSize: 20, fontWeight: 'bold', color: colors.primary },
+  userName: { ...FONTS.h3, color: colors.text, marginBottom: 2 },
   privacyPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: COLORS.card, paddingHorizontal: 8, paddingVertical: 2,
+    backgroundColor: colors.card, paddingHorizontal: 8, paddingVertical: 2,
     borderRadius: 12, alignSelf: 'flex-start',
   },
-  privacyText: { fontSize: 10, color: COLORS.textLight, fontWeight: '600' },
+  privacyText: { fontSize: 10, color: colors.textLight, fontWeight: '600' },
 
   input: {
-    ...FONTS.body1, fontSize: 18, color: COLORS.text,
+    ...FONTS.body1, fontSize: 18, color: colors.text,
     minHeight: 120, textAlignVertical: 'top', marginBottom: SIZES.medium,
   },
 
   fieldsRow: { gap: 10, marginBottom: SIZES.medium },
   fieldWrap: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.card, borderRadius: SIZES.radius.md,
+    backgroundColor: colors.card, borderRadius: SIZES.radius.md,
     paddingHorizontal: 12, paddingVertical: 10,
-    borderWidth: 1, borderColor: COLORS.line,
+    borderWidth: 1, borderColor: colors.line,
   },
   fieldIcon: { marginRight: 8 },
-  fieldInput: { flex: 1, ...FONTS.body2, color: COLORS.text },
+  fieldInput: { flex: 1, ...FONTS.body2, color: colors.text },
 
   imageScroll: { marginTop: 8, maxHeight: 200 },
   imageWrap: { marginRight: 10, position: 'relative' },
@@ -241,9 +244,11 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    flexDirection: 'row', borderTopWidth: 1, borderTopColor: COLORS.line,
-    paddingVertical: 12, paddingHorizontal: SIZES.medium, backgroundColor: COLORS.white,
+    flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.line,
+    paddingVertical: 12, paddingHorizontal: SIZES.medium, backgroundColor: colors.card,
   },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' },
-  actionText: { ...FONTS.body2, color: COLORS.text, fontWeight: '500' },
+  actionText: { ...FONTS.body2, color: colors.text, fontWeight: '500' },
 });
+
+

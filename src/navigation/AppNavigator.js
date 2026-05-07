@@ -4,12 +4,12 @@ import * as Haptics from 'expo-haptics';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { AuthProvider, AuthContext } from '../context/AuthContext';
 import { ConversationProvider } from '../context/ConversationContext';
-import { COLORS, GRADIENTS, SHADOWS } from '../constants/theme';
+import { GRADIENTS, SHADOWS } from '../constants/theme';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { FavoritesProvider } from '../context/FavoritesContext';
 import { UserProvider } from '../context/UserContext';
@@ -39,6 +39,7 @@ import WelcomeUsernameScreen   from '../screens/WelcomeUsernameScreen';
 import PostPropertyScreen      from '../screens/PostPropertyScreen';
 import PostRequestScreen       from '../screens/PostRequestScreen';
 import NewChatScreen           from '../screens/NewChatScreen';
+import SplashScreen            from '../screens/SplashScreen';
 import { useUser }             from '../context/UserContext';
 
 
@@ -89,7 +90,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
                 }}
               >
                 <LinearGradient colors={GRADIENTS.primary} style={styles.fab} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                  <Ionicons name="add" size={28} color="#fff" />
+                  <Ionicons name="add" size={28} color={colors.white} />
                 </LinearGradient>
               </TouchableOpacity>
             );
@@ -158,10 +159,17 @@ function MainTabs() {
 // ─── App Navigator Content (Consumes AuthContext) ──────────────────────────────
 function AppNavigatorContent() {
   const { user, isLoading, hasUsername } = React.useContext(AuthContext);
+  const { colors } = useTheme();
+  const [showSplash, setShowSplash] = useState(true);
+
+  // Show splash on first launch (before auth check completes or after)
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
 
   if (isLoading) {
-    // Return an empty view or a splash screen while checking auth state
-    return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
+    // Return an empty view while checking auth state
+    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
   }
 
   return (
@@ -278,7 +286,7 @@ const getStyles = (colors) => StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1.5, borderColor: colors.card,
   },
-  badgeText: { fontSize: 9, fontWeight: '700', color: '#fff' },
+  badgeText: { fontSize: 9, fontWeight: '700', color: colors.white },
 
   // FAB (center)
   fabWrap: {
@@ -292,3 +300,5 @@ const getStyles = (colors) => StyleSheet.create({
     ...SHADOWS.glow,
   },
 });
+
+

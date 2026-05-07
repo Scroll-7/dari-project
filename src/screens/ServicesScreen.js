@@ -12,7 +12,8 @@ import {
   Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { COLORS, FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 // ─── Static config ────────────────────────────────────────────────────────────
 
@@ -46,6 +47,8 @@ const SERVICES = [
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function ServiceCard({ service, onPress }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const scale = React.useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -67,7 +70,7 @@ function ServiceCard({ service, onPress }) {
         <LinearGradient colors={service.gradient} style={styles.cardGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <View style={styles.cardHeader}>
             <View style={styles.iconCircle}>
-              <Ionicons name={service.icon} size={26} color="#fff" />
+              <Ionicons name={service.icon} size={26} color={colors.white} />
             </View>
             {service.topRated && (
               <View style={styles.topRatedBadge}>
@@ -91,6 +94,8 @@ function ServiceCard({ service, onPress }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ServicesScreen() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation();
 
   const handleServicePress = useCallback((service) => {
@@ -99,7 +104,7 @@ export default function ServicesScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={colors.isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
@@ -111,7 +116,7 @@ export default function ServicesScreen() {
 
         {/* ── Emergency Banner ── */}
         <LinearGradient colors={GRADIENTS.gold} style={styles.emergencyBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-          <Ionicons name="warning-outline" size={22} color="#fff" />
+          <Ionicons name="warning-outline" size={22} color={colors.white} />
           <View style={styles.emergencyText}>
             <Text style={styles.emergencyTitle}>Services d'urgence 24/7</Text>
             <Text style={styles.emergencySub}>Plombier · Électricien disponible maintenant</Text>
@@ -140,7 +145,7 @@ export default function ServicesScreen() {
             { icon: 'card-outline',             text: 'Paiement sécurisé' },
           ].map((item) => (
             <View key={item.text} style={styles.trustItem}>
-              <Ionicons name={item.icon} size={20} color={COLORS.primary} />
+              <Ionicons name={item.icon} size={20} color={colors.primary} />
               <Text style={styles.trustText}>{item.text}</Text>
             </View>
           ))}
@@ -153,34 +158,33 @@ export default function ServicesScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: COLORS.background },
+const getStyles = (colors) => StyleSheet.create({
+  safe:   { flex: 1, backgroundColor: colors.background },
   scroll: { paddingBottom: 110 },
 
   header: {
     paddingHorizontal: SIZES.medium,
     paddingTop: SIZES.large, paddingBottom: SIZES.medium,
   },
-  title:    { ...FONTS.h1, color: COLORS.text },
-  subtitle: { ...FONTS.body2, color: COLORS.textLight, marginTop: 4 },
+  title:    { ...FONTS.h1, color: colors.text },
+  subtitle: { ...FONTS.body2, color: colors.textLight, marginTop: 4 },
 
   // Emergency banner
   emergencyBanner: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: SIZES.medium, borderRadius: SIZES.radius.lg,
     padding: SIZES.medium, gap: 10, marginBottom: SIZES.large,
-    ...SHADOWS.glowGold,
   },
-  emergencyText: { flex: 1 },
-  emergencyTitle: { ...FONTS.body1, color: '#fff', fontWeight: '700' },
-  emergencySub:   { ...FONTS.caption, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
+  emergencyText:    { flex: 1 },
+  emergencyTitle:   { ...FONTS.body1, color: colors.white, fontWeight: '700' },
+  emergencySub:     { ...FONTS.caption, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
   emergencyBtn: {
     backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 14, paddingVertical: 7,
     borderRadius: SIZES.radius.pill,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
   },
-  emergencyBtnText: { ...FONTS.caption, color: '#fff', fontWeight: '700' },
+  emergencyBtnText: { ...FONTS.caption, color: colors.white, fontWeight: '700' },
 
   // Grid
   grid: {
@@ -205,21 +209,21 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.radius.pill,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
   },
-  topRatedText: { fontSize: 10, fontWeight: '700', color: '#fff' },
-  cardTitle: { ...FONTS.h3, color: '#fff' },
-  cardCount: { ...FONTS.caption, color: 'rgba(255,255,255,0.8)', marginTop: 4, marginBottom: SIZES.small },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  availDot:   { width: 7, height: 7, borderRadius: 4, backgroundColor: '#A7F3D0' },
-  availText:  { ...FONTS.caption, color: 'rgba(255,255,255,0.85)', flex: 1 },
+  topRatedText: { fontSize: 10, fontWeight: '700', color: colors.white },
+  cardTitle:    { ...FONTS.h3, color: colors.white },
+  cardCount:    { ...FONTS.caption, color: 'rgba(255,255,255,0.8)', marginTop: 4, marginBottom: SIZES.small },
+  cardFooter:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  availDot:     { width: 7, height: 7, borderRadius: 4, backgroundColor: '#A7F3D0' },
+  availText:    { ...FONTS.caption, color: 'rgba(255,255,255,0.85)', flex: 1 },
 
   // Trust banner
   trustBanner: {
     flexDirection: 'row', justifyContent: 'space-around',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     marginHorizontal: SIZES.medium, borderRadius: SIZES.radius.lg,
     padding: SIZES.medium, marginTop: SIZES.medium,
     ...SHADOWS.light,
   },
   trustItem: { alignItems: 'center', gap: 6 },
-  trustText: { ...FONTS.caption, color: COLORS.textLight, fontWeight: '600' },
+  trustText: { ...FONTS.caption, color: colors.textLight, fontWeight: '600' },
 });

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { getAuth } from 'firebase/auth';
 import { getAllUsers, searchUsersByUsername, getOrCreateConversation } from '../firebase/chat';
+import { useTheme } from '../context/ThemeContext';
 
 const ACCENT = '#4461F2';
 
@@ -24,10 +25,12 @@ const AVATAR_COLORS = ['#4461F2','#E83E8C','#20C997','#FD7E14','#6F42C1','#FFC10
 function pickColor(name = '') {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + h * 31;
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_colors.length];
 }
 
 export default function NewChatScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const myUid = getAuth().currentUser?.uid;
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState([]);
@@ -98,12 +101,12 @@ export default function NewChatScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color="#111" />
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Nouveau message</Text>
       </View>
@@ -151,8 +154,8 @@ export default function NewChatScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FAFB' },
+const getStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
   loadingText: { fontSize: 14, color: '#aaa', marginTop: 8 },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: '#555', marginTop: 8 },
@@ -161,7 +164,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -172,12 +175,12 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18,
     justifyContent: 'center', alignItems: 'center',
   },
-  title: { fontSize: 18, fontWeight: '700', color: '#111' },
+  title: { fontSize: 18, fontWeight: '700', color: colors.text },
 
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     marginHorizontal: 16,
     marginVertical: 12,
     borderRadius: 14,
@@ -188,7 +191,7 @@ const styles = StyleSheet.create({
     gap: 8,
     elevation: 1,
   },
-  searchInput: { flex: 1, fontSize: 15, color: '#111' },
+  searchInput: { flex: 1, fontSize: 15, color: colors.text },
 
   list: { paddingBottom: 20 },
   sep: { height: 1, backgroundColor: '#f5f5f5', marginLeft: 76 },
@@ -196,7 +199,7 @@ const styles = StyleSheet.create({
   userRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     paddingHorizontal: 16,
     paddingVertical: 13,
     gap: 12,
@@ -207,8 +210,8 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 17, fontWeight: '700' },
   userInfo: { flex: 1 },
-  userName: { fontSize: 15, fontWeight: '600', color: '#111' },
-  userHandle: { fontSize: 12, color: '#888', marginTop: 2 },
+  userName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  userHandle: { fontSize: 12, color: colors.textLight, marginTop: 2 },
   userCity: { fontSize: 11, color: '#aaa', marginTop: 2 },
   msgBtn: {
     width: 36, height: 36, borderRadius: 18,
@@ -216,3 +219,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
 });
+
+
+
+

@@ -6,8 +6,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, collection, query, where, onSnapshot, doc, deleteDoc, orderBy } from 'firebase/firestore';
+import { useTheme } from '../context/ThemeContext';
 
 export default function MyListingsScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,7 +66,7 @@ export default function MyListingsScreen({ navigation }) {
         <Text style={styles.price}>{item.budget ? `${item.budget} DT` : ''}</Text>
       </View>
       <View style={styles.locationWrap}>
-        <Ionicons name="location-outline" size={14} color="#888" />
+        <Ionicons name="location-outline" size={14} color={colors.textLight} />
         <Text style={styles.locationText}>{item.city || 'Non spécifié'}</Text>
       </View>
       
@@ -72,7 +75,7 @@ export default function MyListingsScreen({ navigation }) {
           style={styles.editBtn} 
           onPress={() => navigation.navigate('PostRequest', { editPost: item })}
         >
-          <Ionicons name="pencil" size={16} color="#fff" />
+          <Ionicons name="pencil" size={16} color={colors.white} />
           <Text style={styles.btnText}>Modifier</Text>
         </TouchableOpacity>
         
@@ -80,7 +83,7 @@ export default function MyListingsScreen({ navigation }) {
           style={styles.deleteBtn} 
           onPress={() => handleDelete(item.firestoreId)}
         >
-          <Ionicons name="trash" size={16} color="#fff" />
+          <Ionicons name="trash" size={16} color={colors.white} />
           <Text style={styles.btnText}>Supprimer</Text>
         </TouchableOpacity>
       </View>
@@ -91,7 +94,7 @@ export default function MyListingsScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Mes Annonces</Text>
         <View style={{ width: 24 }} />
@@ -107,7 +110,7 @@ export default function MyListingsScreen({ navigation }) {
           <Text style={styles.emptyTitle}>Aucune annonce</Text>
           <Text style={styles.emptyText}>Vos annonces de colocation apparaîtront ici.</Text>
           <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('PostRequest')}>
-            <Ionicons name="add" size={18} color="#fff" />
+            <Ionicons name="add" size={18} color={colors.white} />
             <Text style={styles.addBtnText}>Publier une annonce</Text>
           </TouchableOpacity>
         </View>
@@ -123,33 +126,33 @@ export default function MyListingsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F5F7FA' },
+const getStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
   header: { 
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', 
-    padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' 
+    padding: 16, backgroundColor: colors.card, borderBottomWidth: 1, borderColor: '#eee' 
   },
-  title: { fontSize: 18, fontWeight: '700', color: '#222' },
+  title: { fontSize: 18, fontWeight: '700', color: colors.text },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#333', marginTop: 16 },
-  emptyText: { fontSize: 14, color: '#888', textAlign: 'center', marginTop: 8 },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: colors.text, marginTop: 16 },
+  emptyText: { fontSize: 14, color: colors.textLight, textAlign: 'center', marginTop: 8 },
   addBtn: { 
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#4461F2', 
     borderRadius: 14, paddingHorizontal: 20, paddingVertical: 12, marginTop: 24 
   },
-  addBtnText: { color: '#fff', fontWeight: '700', fontSize: 14, marginLeft: 6 },
+  addBtnText: { color: colors.white, fontWeight: '700', fontSize: 14, marginLeft: 6 },
   list: { padding: 16, gap: 12 },
   card: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 16,
+    backgroundColor: colors.card, borderRadius: 16, padding: 16,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  roleText: { fontSize: 15, fontWeight: '600', color: '#222', flex: 1, marginRight: 8 },
+  roleText: { fontSize: 15, fontWeight: '600', color: colors.text, flex: 1, marginRight: 8 },
   price: { fontSize: 15, fontWeight: '700', color: '#4461F2' },
   locationWrap: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  locationText: { fontSize: 13, color: '#666', marginLeft: 4 },
+  locationText: { fontSize: 13, color: colors.textLight, marginLeft: 4 },
   actions: { flexDirection: 'row', marginTop: 16, gap: 8 },
   editBtn: { 
     flex: 1, flexDirection: 'row', backgroundColor: '#4461F2', 
@@ -159,5 +162,9 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', backgroundColor: '#FF4B4B', 
     borderRadius: 10, paddingVertical: 10, justifyContent: 'center', alignItems: 'center' 
   },
-  btnText: { color: '#fff', fontSize: 14, fontWeight: '600', marginLeft: 6 },
+  btnText: { color: colors.white, fontSize: 14, fontWeight: '600', marginLeft: 6 },
 });
+
+
+
+

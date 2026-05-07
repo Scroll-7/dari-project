@@ -13,9 +13,12 @@ import {
   View,
   ScrollView,
 } from "react-native";
-import { COLORS, FONTS, SHADOWS, SIZES } from "../constants/theme";
+import { FONTS, SHADOWS, SIZES } from "../constants/theme";
+import { useTheme } from '../context/ThemeContext';
 
 export default function SignupScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,13 +84,13 @@ export default function SignupScreen({ navigation }) {
               <Ionicons
                 name="person-outline"
                 size={20}
-                color={COLORS.textLight}
+                color={colors.textLight}
                 style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your full name"
-                placeholderTextColor={COLORS.textLight}
+                placeholderTextColor={colors.textLight}
                 autoCapitalize="words"
                 value={fullName}
                 onChangeText={setFullName}
@@ -99,13 +102,13 @@ export default function SignupScreen({ navigation }) {
               <Ionicons
                 name="mail-outline"
                 size={20}
-                color={COLORS.textLight}
+                color={colors.textLight}
                 style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your email"
-                placeholderTextColor={COLORS.textLight}
+                placeholderTextColor={colors.textLight}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
@@ -118,13 +121,13 @@ export default function SignupScreen({ navigation }) {
               <Ionicons
                 name="lock-closed-outline"
                 size={20}
-                color={COLORS.textLight}
+                color={colors.textLight}
                 style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Create a password"
-                placeholderTextColor={COLORS.textLight}
+                placeholderTextColor={colors.textLight}
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
@@ -136,7 +139,7 @@ export default function SignupScreen({ navigation }) {
                 <Ionicons
                   name={showPassword ? "eye-outline" : "eye-off-outline"}
                   size={20}
-                  color={COLORS.textLight}
+                  color={colors.textLight}
                 />
               </TouchableOpacity>
             </View>
@@ -146,13 +149,13 @@ export default function SignupScreen({ navigation }) {
               <Ionicons
                 name="lock-closed-outline"
                 size={20}
-                color={COLORS.textLight}
+                color={colors.textLight}
                 style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Confirm your password"
-                placeholderTextColor={COLORS.textLight}
+                placeholderTextColor={colors.textLight}
                 secureTextEntry={!showPassword}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -161,7 +164,7 @@ export default function SignupScreen({ navigation }) {
 
             <TouchableOpacity style={styles.loginBtn} onPress={handleSignup}>
               <LinearGradient
-                colors={[COLORS.primary, COLORS.secondary]}
+                colors={[colors.primary, colors.secondary]}
                 style={styles.loginGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -185,47 +188,47 @@ export default function SignupScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+const getStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   scrollContainer: { flexGrow: 1, justifyContent: "center", padding: SIZES.large, paddingVertical: SIZES.xxl },
   headerContainer: { marginBottom: SIZES.xl, alignItems: "center" },
   title: {
     fontSize: 40,
     fontWeight: "bold",
-    color: COLORS.primary,
+    color: colors.primary,
     letterSpacing: -1,
     marginBottom: 8,
   },
   subtitle: {
     ...FONTS.body1,
-    color: COLORS.textLight,
+    color: colors.textLight,
     textAlign: "center",
     paddingHorizontal: SIZES.large,
   },
   formContainer: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.card,
     padding: SIZES.large,
     borderRadius: 24,
     ...SHADOWS.medium,
   },
   errorText: {
-    color: 'red',
+    color: colors.error,
     marginBottom: SIZES.medium,
     textAlign: 'center',
     fontWeight: '600',
   },
-  inputLabel: { ...FONTS.h3, color: COLORS.text, marginBottom: 8 },
+  inputLabel: { ...FONTS.h3, color: colors.text, marginBottom: 8 },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderRadius: 12,
     marginBottom: SIZES.medium,
     paddingHorizontal: SIZES.small,
     height: 50,
   },
   inputIcon: { marginRight: 8 },
-  input: { flex: 1, height: "100%", ...FONTS.body1, color: COLORS.text },
+  input: { flex: 1, height: "100%", ...FONTS.body1, color: colors.text },
   eyeIcon: { padding: 8 },
   loginBtn: {
     borderRadius: 16,
@@ -235,12 +238,12 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.medium,
   },
   loginGradient: { height: 56, justifyContent: "center", alignItems: "center" },
-  loginBtnText: { ...FONTS.h3, color: COLORS.white, fontWeight: "bold" },
+  loginBtnText: { ...FONTS.h3, color: colors.white, fontWeight: "bold" },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     marginTop: SIZES.xxl,
   },
-  footerText: { ...FONTS.body1, color: COLORS.textLight },
-  loginText: { ...FONTS.body1, color: COLORS.primary, fontWeight: "bold" },
+  footerText: { ...FONTS.body1, color: colors.textLight },
+  loginText: { ...FONTS.body1, color: colors.primary, fontWeight: "bold" },
 });

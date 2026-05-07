@@ -1,17 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { COLORS, FONTS, SIZES } from '../constants/theme';
+import { FONTS, SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * SectionHeader — shared section title + optional "See All" link
- *
- * Props:
- *  title    — section title text
- *  onSeeAll — optional callback; if provided, renders "Voir tout" / seeAllLabel
- *  seeAllLabel — defaults to "Voir tout"
- *  style    — outer style override
  */
 export function SectionHeader({ title, onSeeAll, seeAllLabel = 'Voir tout', style }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   return (
     <View style={[styles.row, style]}>
       <Text style={styles.title}>{title}</Text>
@@ -24,13 +21,13 @@ export function SectionHeader({ title, onSeeAll, seeAllLabel = 'Voir tout', styl
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SIZES.medium,
   },
-  title: { ...FONTS.h3, color: COLORS.text },
-  link: { ...FONTS.body2, color: COLORS.primary, fontWeight: '600' },
+  title: { ...FONTS.h3, color: colors.text },
+  link: { ...FONTS.body2, color: colors.primary, fontWeight: '600' },
 });

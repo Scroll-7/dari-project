@@ -18,7 +18,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useUser } from '../context/UserContext';
-import { COLORS, FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
 import { PROPERTIES } from '../constants/mockData';
 
 // ─── Static config ────────────────────────────────────────────────────────────
@@ -41,8 +41,8 @@ const BADGES = [
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen({ navigation }) {
-  const { user }              = useUser();
   const { isDark, toggleTheme, colors } = useTheme();
+  const { user }              = useUser();
   const { getFavoriteIds }    = useFavorites();
   const [showEdit, setShowEdit] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? '');
@@ -81,11 +81,11 @@ export default function ProfileScreen({ navigation }) {
         {/* ── Gradient header ── */}
         <LinearGradient colors={colors.gradientPrimary || GRADIENTS.primary} style={styles.gradHeader} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={20} color="#fff" />
+            <Ionicons name="arrow-back" size={20} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Mon Profil</Text>
           <TouchableOpacity style={styles.editBtn} onPress={() => setShowEdit(true)}>
-            <Ionicons name="create-outline" size={20} color="#fff" />
+            <Ionicons name="create-outline" size={20} color={colors.white} />
           </TouchableOpacity>
         </LinearGradient>
 
@@ -147,7 +147,7 @@ export default function ProfileScreen({ navigation }) {
             value={isDark}
             onValueChange={toggleTheme}
             trackColor={{ false: colors.line, true: colors.primary }}
-            thumbColor="#fff"
+            thumbColor={colors.white}
           />
         </View>
 
@@ -219,7 +219,7 @@ const getStyles = (colors) => StyleSheet.create({
     paddingHorizontal: SIZES.medium,
     paddingTop: SIZES.large, paddingBottom: 60,
   },
-  headerTitle: { ...FONTS.h3, color: '#fff' },
+  headerTitle: { ...FONTS.h3, color: colors.white },
   backBtn: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -251,7 +251,7 @@ const getStyles = (colors) => StyleSheet.create({
     borderWidth: 4, borderColor: colors.card,
     ...SHADOWS.glow,
   },
-  avatarInitials: { fontSize: 32, fontWeight: '700', color: '#fff' },
+  avatarInitials: { fontSize: 32, fontWeight: '700', color: colors.white },
   avatarImg: {
     width: 84, height: 84, borderRadius: 42,
     marginBottom: SIZES.medium,
@@ -342,7 +342,7 @@ const getStyles = (colors) => StyleSheet.create({
   },
   saveBtn:  { borderRadius: SIZES.radius.lg, overflow: 'hidden', marginTop: SIZES.large, ...SHADOWS.glow },
   saveGrad: { paddingVertical: 16, alignItems: 'center' },
-  saveText: { ...FONTS.h3, color: '#fff' },
+  saveText: { ...FONTS.h3, color: colors.white },
   cancelBtn: { alignItems: 'center', marginTop: SIZES.medium },
   cancelText: { ...FONTS.body1, color: colors.textLight },
 });

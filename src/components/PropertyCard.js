@@ -3,7 +3,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFavorites } from '../context/FavoritesContext';
-import { COLORS, FONTS, SHADOWS, SIZES } from '../constants/theme';
+import { FONTS, SHADOWS, SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * PropertyCard — shared card used in Home, Search, and SavedProperties screens.
@@ -20,6 +21,8 @@ const PropertyCard = React.memo(function PropertyCard({
   style,
   horizontal = false,
 }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { isFavorite, toggleFavorite } = useFavorites();
   const saved = isFavorite(property.id);
 
@@ -44,7 +47,7 @@ const PropertyCard = React.memo(function PropertyCard({
             {property.title}
           </Text>
           <View style={styles.row}>
-            <Ionicons name="location-outline" size={11} color={COLORS.textLight} />
+            <Ionicons name="location-outline" size={11} color={colors.textLight} />
             <Text style={styles.horzSub} numberOfLines={1}>
               {' '}{property.neighborhood}, {property.city}
             </Text>
@@ -63,7 +66,7 @@ const PropertyCard = React.memo(function PropertyCard({
           <Ionicons
             name={saved ? 'heart' : 'heart-outline'}
             size={16}
-            color={saved ? COLORS.accent : COLORS.textLight}
+            color={saved ? colors.accent : colors.textLight}
           />
         </TouchableOpacity>
       </TouchableOpacity>
@@ -90,7 +93,7 @@ const PropertyCard = React.memo(function PropertyCard({
           <Ionicons
             name={saved ? 'heart' : 'heart-outline'}
             size={18}
-            color={saved ? COLORS.accent : '#fff'}
+            color={saved ? colors.accent : colors.white}
           />
         </TouchableOpacity>
 
@@ -134,12 +137,12 @@ const PropertyCard = React.memo(function PropertyCard({
 
 export default PropertyCard;
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   // ── Vertical card ─────────────────────────────────────────────
   card: {
     borderRadius: SIZES.radius.xl,
     overflow: 'hidden',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     marginBottom: SIZES.medium,
     ...SHADOWS.medium,
   },
@@ -167,19 +170,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     left: 12,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: SIZES.radius.pill,
   },
-  priceText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  priceText: { color: colors.white, fontSize: 12, fontWeight: '700' },
   infoOverlay: {
     position: 'absolute',
     bottom: 14,
     left: 14,
     right: 14,
   },
-  cardTitle: { ...FONTS.h3, color: '#fff', marginBottom: 3 },
+  cardTitle: { ...FONTS.h3, color: colors.white, marginBottom: 3 },
   cardSub: { fontSize: 11, color: 'rgba(255,255,255,0.85)' },
   row: { flexDirection: 'row', alignItems: 'center' },
   statChip: {
@@ -191,12 +194,12 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: SIZES.radius.pill,
   },
-  statText: { fontSize: 11, color: '#fff', fontWeight: '600' },
+  statText: { fontSize: 11, color: colors.white, fontWeight: '600' },
 
   // ── Horizontal card ────────────────────────────────────────────
   horz: {
     flexDirection: 'row',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius: SIZES.radius.lg,
     overflow: 'hidden',
     marginBottom: SIZES.medium,
@@ -208,23 +211,23 @@ const styles = StyleSheet.create({
     padding: SIZES.small,
     justifyContent: 'space-between',
   },
-  horzTitle: { ...FONTS.h3, color: COLORS.text, fontSize: 14 },
-  horzSub: { ...FONTS.caption, color: COLORS.textLight, marginTop: 2 },
+  horzTitle: { ...FONTS.h3, color: colors.text, fontSize: 14 },
+  horzSub: { ...FONTS.caption, color: colors.textLight, marginTop: 2 },
   horzFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 6,
   },
-  horzPrice: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
-  period: { fontSize: 11, color: COLORS.textLight, fontWeight: '400' },
+  horzPrice: { fontSize: 14, fontWeight: '700', color: colors.primary },
+  period: { fontSize: 11, color: colors.textLight, fontWeight: '400' },
   horzBadge: {
-    backgroundColor: COLORS.primaryOpacity,
+    backgroundColor: colors.primaryOpacity,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: SIZES.radius.pill,
   },
-  horzBadgeText: { fontSize: 10, color: COLORS.primary, fontWeight: '600', textTransform: 'capitalize' },
+  horzBadgeText: { fontSize: 10, color: colors.primary, fontWeight: '600', textTransform: 'capitalize' },
   horzFav: {
     width: 36,
     justifyContent: 'center',

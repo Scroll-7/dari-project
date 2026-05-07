@@ -1,17 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * StarRating — 5-star row with numeric label
- *
- * Props:
- *  rating  — float 0–5
- *  size    — icon size (default 13)
- *  showNum — show numeric rating text (default true)
- *  reviews — optional review count suffix
  */
 export function StarRating({ rating, size = 13, showNum = true, reviews }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const full = Math.floor(rating);
   const half = rating - full >= 0.4;
 
@@ -36,7 +33,7 @@ export function StarRating({ rating, size = 13, showNum = true, reviews }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
-  num: { fontWeight: '700', color: '#374151', marginLeft: 4 },
+  num: { fontWeight: '700', color: colors.textBody, marginLeft: 4 },
 });

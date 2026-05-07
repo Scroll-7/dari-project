@@ -15,16 +15,17 @@ import {
 
 import PropertyCard from '../components/PropertyCard';
 import { SectionHeader } from '../components/SectionHeader';
-import { COLORS, FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
 import { PROPERTIES } from '../constants/mockData';
+import { useTheme } from '../context/ThemeContext';
 
 // ─── Static data ─────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  { id: '1', title: 'Apartments', icon: 'business-outline',  screen: 'Apartments', color: COLORS.primary,  bg: '#EEF2FF' },
-  { id: '2', title: 'Houses',     icon: 'home-outline',       screen: 'Houses',     color: COLORS.teal,    bg: '#F0FDFA' },
-  { id: '3', title: 'Rooms',      icon: 'bed-outline',        screen: 'Rooms',      color: COLORS.rose,    bg: '#FFF1F2' },
-  { id: '4', title: 'Commercial', icon: 'briefcase-outline',  screen: 'Commercial', color: COLORS.gold,    bg: '#FFFBEB' },
+const CATEGORIES_DATA = [
+  { id: '1', title: 'Apartments', icon: 'business-outline',  screen: 'Apartments', themeColor: 'primary' },
+  { id: '2', title: 'Houses',     icon: 'home-outline',       screen: 'Houses',     themeColor: 'teal' },
+  { id: '3', title: 'Rooms',      icon: 'bed-outline',        screen: 'Rooms',      themeColor: 'rose' },
+  { id: '4', title: 'Commercial', icon: 'briefcase-outline',  screen: 'Commercial', themeColor: 'gold' },
 ];
 
 const QUICK_FILTERS = [
@@ -49,6 +50,8 @@ const STATS = [
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatsBar() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   return (
     <LinearGradient colors={GRADIENTS.primary} style={styles.statsBar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
       {STATS.map((s, i) => (
@@ -63,11 +66,13 @@ function StatsBar() {
 }
 
 function AgentCard({ agent }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   return (
     <View style={styles.agentCard}>
       <Image source={{ uri: agent.image }} style={styles.agentImg} />
       <View style={styles.agentBadge}>
-        <Ionicons name="star" size={8} color="#fff" />
+        <Ionicons name="star" size={8} color={colors.white} />
         <Text style={styles.agentBadgeText}>{agent.rating}</Text>
       </View>
       <Text style={styles.agentName} numberOfLines={1}>{agent.name}</Text>
@@ -79,8 +84,16 @@ function AgentCard({ agent }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HomeScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [quickFilter, setQuickFilter] = useState('all');
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  const CATEGORIES = CATEGORIES_DATA.map(cat => ({
+    ...cat,
+    color: colors[cat.themeColor],
+    bg: colors.isDark ? 'rgba(255,255,255,0.05)' : '#EEF2FF'
+  }));
 
   // Animated header height collapse
   const headerOpacity = scrollY.interpolate({
@@ -108,7 +121,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={colors.isDark ? "light-content" : "dark-content"} backgroundColor={colors.background} />
 
       {/* ── Fixed top header ── */}
       <View style={styles.topBar}>
@@ -118,7 +131,7 @@ export default function HomeScreen({ navigation }) {
         </View>
         <View style={styles.topBarRight}>
           <TouchableOpacity style={styles.notifBtn} onPress={() => navigation.navigate('Inbox')}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
+            <Ionicons name="notifications-outline" size={22} color={colors.text} />
             <View style={styles.notifDot} />
           </TouchableOpacity>
           <TouchableOpacity
@@ -151,11 +164,11 @@ export default function HomeScreen({ navigation }) {
           activeOpacity={0.9}
         >
           <View style={styles.searchInner}>
-            <Ionicons name="search-outline" size={18} color={COLORS.textLight} />
+            <Ionicons name="search-outline" size={18} color={colors.textLight} />
             <Text style={styles.searchPlaceholder}>Ville, quartier, adresse…</Text>
           </View>
           <View style={styles.filterChip}>
-            <Ionicons name="options-outline" size={16} color={COLORS.primary} />
+            <Ionicons name="options-outline" size={16} color={colors.primary} />
           </View>
         </TouchableOpacity>
 
@@ -256,7 +269,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.insightsSub}>Prix moyen par ville · Tendances</Text>
             </View>
             <View style={styles.insightsArrow}>
-              <Ionicons name="arrow-forward" size={18} color="#fff" />
+              <Ionicons name="arrow-forward" size={18} color={colors.white} />
             </View>
           </LinearGradient>
         </TouchableOpacity>
@@ -267,8 +280,8 @@ export default function HomeScreen({ navigation }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: COLORS.background },
+const getStyles = (colors) => StyleSheet.create({
+  safe:   { flex: 1, backgroundColor: colors.background },
   scroll: { paddingHorizontal: SIZES.medium, paddingBottom: 110 },
 
   // Top bar
@@ -279,40 +292,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: SIZES.medium,
     paddingTop: SIZES.medium,
     paddingBottom: SIZES.small,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
-  greeting:  { ...FONTS.body2, color: COLORS.textLight },
-  headline:  { ...FONTS.h2, color: COLORS.text, marginTop: 2 },
+  greeting:  { ...FONTS.body2, color: colors.textLight },
+  headline:  { ...FONTS.h2, color: colors.text, marginTop: 2 },
   topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   notifBtn: {
     width: 40, height: 40,
     borderRadius: SIZES.radius.md,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     justifyContent: 'center', alignItems: 'center',
     ...SHADOWS.light,
   },
   notifDot: {
     position: 'absolute', top: 8, right: 8,
     width: 8, height: 8, borderRadius: 4,
-    backgroundColor: COLORS.accent,
-    borderWidth: 1.5, borderColor: COLORS.background,
+    backgroundColor: colors.accent,
+    borderWidth: 1.5, borderColor: colors.background,
   },
   avatarWrap: { position: 'relative' },
   avatar: {
     width: 42, height: 42, borderRadius: 21,
-    borderWidth: 2, borderColor: COLORS.primary,
+    borderWidth: 2, borderColor: colors.primary,
   },
   onlineDot: {
     position: 'absolute', bottom: 1, right: 1,
     width: 11, height: 11, borderRadius: 6,
-    backgroundColor: COLORS.success,
-    borderWidth: 2, borderColor: COLORS.background,
+    backgroundColor: colors.success,
+    borderWidth: 2, borderColor: colors.background,
   },
 
   // Search bar
   searchBar: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius: SIZES.radius.lg,
     paddingHorizontal: SIZES.medium,
     paddingVertical: 12,
@@ -322,10 +335,10 @@ const styles = StyleSheet.create({
     ...SHADOWS.light,
   },
   searchInner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  searchPlaceholder: { ...FONTS.body1, color: COLORS.textLight },
+  searchPlaceholder: { ...FONTS.body1, color: colors.textLight },
   filterChip: {
     width: 34, height: 34, borderRadius: 10,
-    backgroundColor: COLORS.primaryOpacity,
+    backgroundColor: colors.primaryOpacity,
     justifyContent: 'center', alignItems: 'center',
   },
 
@@ -344,7 +357,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: 'rgba(255,255,255,0.2)',
   },
-  statValue: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  statValue: { fontSize: 18, fontWeight: '700', color: colors.white },
   statLabel: { fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: '500', textTransform: 'uppercase' },
 
   // Section header
@@ -359,41 +372,41 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     ...SHADOWS.xs,
   },
-  categoryLabel: { ...FONTS.caption, color: COLORS.text, fontWeight: '600' },
+  categoryLabel: { ...FONTS.caption, color: colors.text, fontWeight: '600' },
 
   // Quick filters
   quickFilters: { gap: 8, paddingBottom: SIZES.large },
   qfChip: {
     paddingHorizontal: 16, paddingVertical: 8,
     borderRadius: SIZES.radius.pill,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderWidth: 1.5, borderColor: 'transparent',
     ...SHADOWS.xs,
   },
   qfChipActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryOpacity,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryOpacity,
   },
-  qfLabel:       { ...FONTS.caption, color: COLORS.textLight, fontWeight: '600' },
-  qfLabelActive: { color: COLORS.primary },
+  qfLabel:       { ...FONTS.caption, color: colors.textLight, fontWeight: '600' },
+  qfLabelActive: { color: colors.primary },
 
   // Agents
   agentsRow: { gap: 14, paddingBottom: SIZES.large },
   agentCard: { alignItems: 'center', width: 90, gap: 4 },
   agentImg: {
     width: 68, height: 68, borderRadius: 34,
-    borderWidth: 2, borderColor: COLORS.primaryOpacity,
+    borderWidth: 2, borderColor: colors.primaryOpacity,
   },
   agentBadge: {
     position: 'absolute', top: 44, right: 4,
     flexDirection: 'row', alignItems: 'center', gap: 2,
     backgroundColor: '#FFC107', borderRadius: 10,
     paddingHorizontal: 5, paddingVertical: 2,
-    borderWidth: 1.5, borderColor: '#fff',
+    borderWidth: 1.5, borderColor: colors.white,
   },
-  agentBadgeText: { fontSize: 9, fontWeight: '700', color: '#fff' },
-  agentName: { ...FONTS.caption, color: COLORS.text, fontWeight: '600', textAlign: 'center' },
-  agentDeals: { fontSize: 10, color: COLORS.textLight, textAlign: 'center' },
+  agentBadgeText: { fontSize: 9, fontWeight: '700', color: colors.white },
+  agentName: { ...FONTS.caption, color: colors.text, fontWeight: '600', textAlign: 'center' },
+  agentDeals: { fontSize: 10, color: colors.textLight, textAlign: 'center' },
 
   // Market Insights banner
   insightsBanner: { borderRadius: SIZES.radius.lg, overflow: 'hidden', marginTop: SIZES.small, ...SHADOWS.medium },
@@ -402,7 +415,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: SIZES.medium,
   },
-  insightsTitle: { ...FONTS.h3, color: '#fff' },
+  insightsTitle: { ...FONTS.h3, color: colors.white },
   insightsSub:   { ...FONTS.caption, color: 'rgba(255,255,255,0.8)', marginTop: 3 },
   insightsArrow: {
     width: 36, height: 36, borderRadius: 18,
@@ -410,3 +423,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
 });
+
+
