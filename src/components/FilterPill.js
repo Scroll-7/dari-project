@@ -1,18 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { COLORS, FONTS, SHADOWS, SIZES } from '../constants/theme';
+import { FONTS, SHADOWS, SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * FilterPill — animated filter chip button
- *
- * Props:
- *  label    — chip label
- *  active   — boolean active state
- *  onPress  — press handler
- *  count    — optional badge count
- *  style    — outer style override
  */
 export function FilterPill({ label, active, onPress, count, style }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   return (
     <TouchableOpacity
       style={[
@@ -31,26 +27,26 @@ export function FilterPill({ label, active, onPress, count, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   pill: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: SIZES.radius.pill,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderWidth: 1.5,
     borderColor: 'transparent',
     ...SHADOWS.xs,
   },
   pillActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryOpacity,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryOpacity,
   },
   text: {
     ...FONTS.caption,
-    color: COLORS.textLight,
+    color: colors.textLight,
     fontWeight: '600',
   },
   textActive: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
 });

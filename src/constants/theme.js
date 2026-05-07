@@ -148,3 +148,4 @@ export const ANIMATION = {
   spring:  { tension: 120, friction: 8 },
   bounce:  { tension: 200, friction: 6 },
 };
+

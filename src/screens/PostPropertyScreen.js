@@ -6,9 +6,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '../context/UserContext';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../constants/theme';
+import { FONTS, SIZES, SHADOWS } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 export default function PostPropertyScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { user } = useUser();
   const [description, setDescription] = useState('');
   const [images, setImages] = useState([]);
@@ -36,7 +39,7 @@ export default function PostPropertyScreen({ navigation }) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="close" size={28} color={COLORS.text} />
+            <Ionicons name="close" size={28} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.title}>Create Listing</Text>
           <TouchableOpacity 
@@ -60,7 +63,7 @@ export default function PostPropertyScreen({ navigation }) {
             <View>
               <Text style={styles.userName}>{user?.name || 'Propriétaire'}</Text>
               <View style={styles.privacyPill}>
-                <Ionicons name="globe-outline" size={12} color={COLORS.textLight} />
+                <Ionicons name="globe-outline" size={12} color={colors.textLight} />
                 <Text style={styles.privacyText}>Public</Text>
               </View>
             </View>
@@ -69,7 +72,7 @@ export default function PostPropertyScreen({ navigation }) {
           <TextInput
             style={styles.input}
             placeholder="Describe your property (price, rooms, location)..."
-            placeholderTextColor={COLORS.textLight}
+            placeholderTextColor={colors.textLight}
             multiline
             autoFocus
             value={description}
@@ -85,7 +88,7 @@ export default function PostPropertyScreen({ navigation }) {
                     style={styles.removeImgBtn} 
                     onPress={() => setImages(images.filter((_, i) => i !== index))}
                   >
-                    <Ionicons name="close-circle" size={24} color="#fff" />
+                    <Ionicons name="close-circle" size={24} color={colors.white} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -108,8 +111,8 @@ export default function PostPropertyScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.white },
+const getStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.card },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -117,36 +120,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: SIZES.medium,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.line,
+    borderBottomColor: colors.line,
   },
   backBtn: { width: 40, height: 40, justifyContent: 'center' },
-  title: { ...FONTS.h3, color: COLORS.text, fontWeight: '700' },
+  title: { ...FONTS.h3, color: colors.text, fontWeight: '700' },
   postBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
-  postBtnText: { color: '#fff', fontWeight: 'bold' },
+  postBtnText: { color: colors.white, fontWeight: 'bold' },
   content: { padding: SIZES.medium },
   userInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: SIZES.large },
   avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12 },
   avatarPlaceholder: {
     width: 48, height: 48, borderRadius: 24, marginRight: 12,
-    backgroundColor: COLORS.primaryOpacity, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.primaryOpacity, justifyContent: 'center', alignItems: 'center',
   },
-  avatarInitial: { fontSize: 20, fontWeight: 'bold', color: COLORS.primary },
-  userName: { ...FONTS.h3, color: COLORS.text, marginBottom: 2 },
+  avatarInitial: { fontSize: 20, fontWeight: 'bold', color: colors.primary },
+  userName: { ...FONTS.h3, color: colors.text, marginBottom: 2 },
   privacyPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: COLORS.card, paddingHorizontal: 8, paddingVertical: 2,
+    backgroundColor: colors.card, paddingHorizontal: 8, paddingVertical: 2,
     borderRadius: 12, alignSelf: 'flex-start',
   },
-  privacyText: { fontSize: 10, color: COLORS.textLight, fontWeight: '600' },
+  privacyText: { fontSize: 10, color: colors.textLight, fontWeight: '600' },
   input: {
     ...FONTS.body1,
     fontSize: 20,
-    color: COLORS.text,
+    color: colors.text,
     minHeight: 120,
     textAlignVertical: 'top',
   },
@@ -160,14 +163,16 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: COLORS.line,
+    borderTopColor: colors.line,
     paddingVertical: 12,
     paddingHorizontal: SIZES.medium,
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.card,
   },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     flex: 1, justifyContent: 'center',
   },
-  actionText: { ...FONTS.body2, color: COLORS.text, fontWeight: '500' },
+  actionText: { ...FONTS.body2, color: colors.text, fontWeight: '500' },
 });
+
+

@@ -1,17 +1,31 @@
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  sendEmailVerification 
+import {
+  initializeAuth,
+  getReactNativePersistence,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  sendEmailVerification,
+  getAuth,
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { initFirebase } from './config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getApps } from 'firebase/app';
 
 // Ensure Firebase is initialized
-initFirebase();
+const app = initFirebase();
 
-const auth = getAuth();
+// Use AsyncStorage persistence so the auth session survives app restarts
+let auth;
+try {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+} catch (e) {
+  // initializeAuth throws if already initialized — fall back to getAuth()
+  auth = getAuth(app);
+}
+
 const db = getFirestore();
 
 /**

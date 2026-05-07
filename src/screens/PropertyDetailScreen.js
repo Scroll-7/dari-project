@@ -16,7 +16,8 @@ import {
 import { useFavorites } from '../context/FavoritesContext';
 import { useConversations } from '../context/ConversationContext';
 import { StarRating } from '../components/StarRating';
-import { COLORS, FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 // ─── Mock extensions ──────────────────────────────────────────────────────────
 
@@ -40,21 +41,21 @@ const AGENT = {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function AmenityChip({ icon, label }) {
+function AmenityChip({ icon, label, colors, styles }) {
   return (
     <View style={styles.amenity}>
       <View style={styles.amenityIcon}>
-        <Ionicons name={icon} size={18} color={COLORS.primary} />
+        <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
       <Text style={styles.amenityLabel}>{label}</Text>
     </View>
   );
 }
 
-function StatBox({ icon, value, label }) {
+function StatBox({ icon, value, label, colors, styles }) {
   return (
     <View style={styles.statBox}>
-      <Ionicons name={icon} size={22} color={COLORS.primary} />
+      <Ionicons name={icon} size={22} color={colors.primary} />
       <Text style={styles.statVal}>{value}</Text>
       <Text style={styles.statLbl}>{label}</Text>
     </View>
@@ -64,6 +65,8 @@ function StatBox({ icon, value, label }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PropertyDetailScreen({ route, navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { property } = route.params;
   const { isFavorite, toggleFavorite } = useFavorites();
   const { openOrCreateConversation } = useConversations();
@@ -88,7 +91,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={colors.isDark ? 'light-content' : 'dark-content'} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
@@ -103,14 +106,14 @@ export default function PropertyDetailScreen({ route, navigation }) {
           {/* Back & Save buttons */}
           <View style={styles.heroTopRow}>
             <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={20} color="#fff" />
+              <Ionicons name="arrow-back" size={20} color={colors.white} />
             </TouchableOpacity>
             <View style={styles.heroTopRight}>
               <TouchableOpacity style={styles.heroBtn} onPress={() => toggleFavorite(property.id)}>
-                <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? COLORS.accent : '#fff'} />
+                <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? colors.accent : colors.white} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.heroBtn}>
-                <Ionicons name="share-social-outline" size={20} color="#fff" />
+                <Ionicons name="share-social-outline" size={20} color={colors.white} />
               </TouchableOpacity>
             </View>
           </View>
@@ -129,7 +132,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{property.title}</Text>
               <View style={styles.locRow}>
-                <Ionicons name="location-outline" size={13} color={COLORS.textLight} />
+                <Ionicons name="location-outline" size={13} color={colors.textLight} />
                 <Text style={styles.loc}> {property.neighborhood}, {property.city}</Text>
               </View>
             </View>
@@ -142,9 +145,9 @@ export default function PropertyDetailScreen({ route, navigation }) {
 
           {/* Stats */}
           <View style={styles.statsRow}>
-            {property.bedrooms > 0 && <StatBox icon="bed-outline"    value={property.bedrooms} label="Chambres" />}
-            {property.bathrooms > 0 && <StatBox icon="water-outline"  value={property.bathrooms} label="SdB" />}
-            <StatBox icon="resize-outline" value={`${property.area}m²`} label="Surface" />
+            {property.bedrooms > 0 && <StatBox icon="bed-outline"    value={property.bedrooms} label="Chambres" colors={colors} styles={styles} />}
+            {property.bathrooms > 0 && <StatBox icon="water-outline"  value={property.bathrooms} label="SdB" colors={colors} styles={styles} />}
+            <StatBox icon="resize-outline" value={`${property.area}m²`} label="Surface" colors={colors} styles={styles} />
           </View>
 
           {/* Description */}
@@ -155,14 +158,14 @@ export default function PropertyDetailScreen({ route, navigation }) {
           <Text style={styles.sectionTitle}>Équipements</Text>
           <View style={styles.amenitiesGrid}>
             {AMENITIES.map((a) => (
-              <AmenityChip key={a.label} icon={a.icon} label={a.label} />
+              <AmenityChip key={a.label} icon={a.icon} label={a.label} colors={colors} styles={styles} />
             ))}
           </View>
 
           {/* Virtual tour button */}
           <TouchableOpacity style={styles.tourBtn} activeOpacity={0.85}>
             <LinearGradient colors={GRADIENTS.teal} style={styles.tourGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              <Ionicons name="videocam-outline" size={20} color="#fff" />
+              <Ionicons name="videocam-outline" size={20} color={colors.white} />
               <Text style={styles.tourText}>Visite Virtuelle 360°</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -177,7 +180,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
               <StarRating rating={AGENT.rating} reviews={AGENT.reviews} size={12} />
             </View>
             <TouchableOpacity style={styles.agentChatBtn} onPress={handleChat}>
-              <Ionicons name="chatbubble-ellipses" size={18} color={COLORS.primary} />
+              <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -192,11 +195,11 @@ export default function PropertyDetailScreen({ route, navigation }) {
         </View>
         <View style={styles.bottomBtns}>
           <TouchableOpacity style={styles.chatBtnSmall} onPress={handleChat}>
-            <Ionicons name="chatbubble-outline" size={18} color={COLORS.primary} />
+            <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.callBtn} onPress={handleCall} activeOpacity={0.88}>
-            <LinearGradient colors={GRADIENTS.primary} style={styles.callGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              <Ionicons name="call" size={18} color="#fff" />
+            <LinearGradient colors={colors.gradientPrimary || GRADIENTS.primary} style={styles.callGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              <Ionicons name="call" size={18} color={colors.white} />
               <Text style={styles.callText}>Contacter</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -208,8 +211,8 @@ export default function PropertyDetailScreen({ route, navigation }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: COLORS.background },
+const getStyles = (colors) => StyleSheet.create({
+  safe:   { flex: 1, backgroundColor: colors.background },
   scroll: { paddingBottom: 100 },
 
   // Hero
@@ -228,54 +231,54 @@ const styles = StyleSheet.create({
   },
   typeBadge: {
     position: 'absolute', bottom: 16, left: 16,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 12, paddingVertical: 5,
     borderRadius: SIZES.radius.pill,
   },
-  typeBadgeText: { ...FONTS.label, color: '#fff' },
+  typeBadgeText: { ...FONTS.label, color: colors.white },
 
   // Body
   body: { padding: SIZES.medium },
 
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: SIZES.medium },
-  title: { ...FONTS.h2, color: COLORS.text },
+  title: { ...FONTS.h2, color: colors.text },
   locRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  loc:   { ...FONTS.caption, color: COLORS.textLight, textTransform: 'capitalize' },
+  loc:   { ...FONTS.caption, color: colors.textLight, textTransform: 'capitalize' },
 
   priceBlock: { alignItems: 'flex-end', minWidth: 100 },
-  price: { fontSize: 20, fontWeight: '800', color: COLORS.primary },
+  price: { fontSize: 20, fontWeight: '800', color: colors.primary },
   currency: { fontSize: 14, fontWeight: '600' },
-  period: { ...FONTS.caption, color: COLORS.textLight },
-  pricePerM2: { fontSize: 10, color: COLORS.textLight, marginTop: 2 },
+  period: { ...FONTS.caption, color: colors.textLight },
+  pricePerM2: { fontSize: 10, color: colors.textLight, marginTop: 2 },
 
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius: SIZES.radius.lg,
     padding: SIZES.medium,
     marginBottom: SIZES.large,
     ...SHADOWS.light,
   },
   statBox: { alignItems: 'center', gap: 4 },
-  statVal: { ...FONTS.h3, color: COLORS.text },
-  statLbl: { ...FONTS.caption, color: COLORS.textLight },
+  statVal: { ...FONTS.h3, color: colors.text },
+  statLbl: { ...FONTS.caption, color: colors.textLight },
 
-  sectionTitle: { ...FONTS.h3, color: COLORS.text, marginBottom: SIZES.small, marginTop: SIZES.medium },
+  sectionTitle: { ...FONTS.h3, color: colors.text, marginBottom: SIZES.small, marginTop: SIZES.medium },
 
-  desc: { ...FONTS.body1, color: COLORS.textBody, lineHeight: 24 },
+  desc: { ...FONTS.body1, color: colors.textBody, lineHeight: 24 },
 
   amenitiesGrid: {
     flexDirection: 'row', flexWrap: 'wrap', gap: SIZES.small,
   },
   amenity: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.primaryOpacity,
+    backgroundColor: colors.primaryOpacity,
     paddingHorizontal: 12, paddingVertical: 8,
     borderRadius: SIZES.radius.md,
   },
   amenityIcon: {},
-  amenityLabel: { ...FONTS.caption, color: COLORS.primary, fontWeight: '600' },
+  amenityLabel: { ...FONTS.caption, color: colors.primary, fontWeight: '600' },
 
   // Virtual tour
   tourBtn: { borderRadius: SIZES.radius.lg, overflow: 'hidden', marginTop: SIZES.medium, ...SHADOWS.glow },
@@ -283,22 +286,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: SIZES.medium,
   },
-  tourText: { ...FONTS.h3, color: '#fff' },
+  tourText: { ...FONTS.h3, color: colors.white },
 
   // Agent card
   agentCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius: SIZES.radius.lg, padding: SIZES.medium, gap: 12,
     ...SHADOWS.light,
   },
   agentImg: { width: 54, height: 54, borderRadius: 27 },
   agentInfo: { flex: 1 },
-  agentName: { ...FONTS.h3, color: COLORS.text },
-  agentRole: { ...FONTS.caption, color: COLORS.textLight, marginBottom: 4 },
+  agentName: { ...FONTS.h3, color: colors.text },
+  agentRole: { ...FONTS.caption, color: colors.textLight, marginBottom: 4 },
   agentChatBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: COLORS.primaryOpacity,
+    backgroundColor: colors.primaryOpacity,
     justifyContent: 'center', alignItems: 'center',
   },
 
@@ -307,20 +310,20 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     paddingHorizontal: SIZES.medium,
     paddingVertical: 12,
     paddingBottom: 18,
-    borderTopWidth: 1, borderTopColor: COLORS.line,
+    borderTopWidth: 1, borderTopColor: colors.line,
     ...SHADOWS.medium,
   },
   bottomPrice: {},
-  bottomPriceVal: { fontSize: 18, fontWeight: '800', color: COLORS.primary },
-  bottomPricePeriod: { ...FONTS.caption, color: COLORS.textLight },
+  bottomPriceVal: { fontSize: 18, fontWeight: '800', color: colors.primary },
+  bottomPricePeriod: { ...FONTS.caption, color: colors.textLight },
   bottomBtns: { flexDirection: 'row', gap: 10 },
   chatBtnSmall: {
     width: 46, height: 46, borderRadius: 23,
-    backgroundColor: COLORS.primaryOpacity,
+    backgroundColor: colors.primaryOpacity,
     justifyContent: 'center', alignItems: 'center',
     ...SHADOWS.xs,
   },
@@ -329,5 +332,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: SIZES.large, paddingVertical: 12,
   },
-  callText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  callText: { color: colors.white, fontSize: 14, fontWeight: '700' },
 });

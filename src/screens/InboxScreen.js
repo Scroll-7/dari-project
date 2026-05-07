@@ -15,9 +15,8 @@ import { useNavigation } from '@react-navigation/native';
 import { getAuth } from 'firebase/auth';
 import { subscribeToConversations } from '../firebase/chat';
 import { useConversations } from '../context/ConversationContext';
-import { COLORS, FONTS, SHADOWS, SIZES } from '../constants/theme';
-
-const ACCENT = COLORS.primary;
+import { FONTS, SHADOWS, SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -53,6 +52,8 @@ const TAG_CONFIG = {
 // ─── Chat Row ─────────────────────────────────────────────────────────────────
 
 function ChatRow({ item, onPress }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const name = item.name || item.otherName || 'Utilisateur';
   const color = item.avatarColor || pickColor(name);
   const initials = item.initials || getInitials(name);
@@ -71,8 +72,8 @@ function ChatRow({ item, onPress }) {
           <View style={styles.chatNameRow}>
             <Text style={styles.chatName} numberOfLines={1}>{name}</Text>
             {tag && (
-              <View style={[styles.tagChip, { backgroundColor: tag.bg }]}>
-                <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
+              <View style={[styles.tagChip, { backgroundColor: colors.isDark ? '#1E1B4B' : tag.bg }]}>
+                <Text style={[styles.tagText, { color: colors.isDark ? colors.primary : tag.color }]}>{tag.label}</Text>
               </View>
             )}
           </View>
@@ -87,6 +88,8 @@ function ChatRow({ item, onPress }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function InboxScreen() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation();
   const myUid = getAuth().currentUser?.uid;
   const { conversations: localConvs } = useConversations();
@@ -95,142 +98,70 @@ export default function InboxScreen() {
   const [loadingFb, setLoadingFb] = useState(true);
   const [search, setSearch] = useState('');
 
-  // Subscribe to real Firebase conversations
   useEffect(() => {
-    if (!myUid) { setLoadingFb(false); return; }
+    if (!myUid) return;
     const unsub = subscribeToConversations(myUid, (convs) => {
       setFirebaseConvs(convs);
       setLoadingFb(false);
     });
-    return unsub;
+    return () => unsub();
   }, [myUid]);
 
-  // Map local ConversationContext entries (service providers) to display format.
-  // These only exist if the user actually tapped the chat button on a provider.
-  const localChatsDisplay = localConvs.map((conv) => {
-    const last = conv.messages?.length
-      ? conv.messages[conv.messages.length - 1]
-      : null;
-    return {
-      id: conv.id,
-      personId: conv.personId,
-      name: conv.name,
-      initials: conv.initials || getInitials(conv.name),
-      avatarColor: conv.avatarColor,
-      lastMessage: last
-        ? (last.fromSelf ? `Vous: ${last.text}` : last.text)
-        : (conv.lastMessage || 'Démarrez la conversation…'),
-      time: last
-        ? new Date(last.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : '',
-      tag: 'service',
-      isLocal: true,
-    };
-  });
-
-  // Convert Firebase convs to display format
-  const fbChatsDisplay = firebaseConvs.map((c) => ({
-    ...c,
-    name: c.otherName,
-    initials: getInitials(c.otherName),
-    avatarColor: pickColor(c.otherName),
-    tag: 'firebase',
-    isLocal: false,
-  }));
-
-  // Combine: service provider chats the user started + real Firebase convs
-  const allChats = [...localChatsDisplay, ...fbChatsDisplay];
-
-  const filtered = allChats.filter((c) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (c.name || '').toLowerCase().includes(q) ||
-           (c.otherUsername || '').toLowerCase().includes(q);
-  });
-
-  const handleChatPress = (item) => {
-    if (item.isLocal) {
-      // Open local ConversationContext-based chat (service providers)
+  const handlePress = (item) => {
+    if (item.personId) {
+      // Local mock conversation
       navigation.navigate('Chat', { personId: item.personId });
     } else {
-      // Open real Firebase chat
-      navigation.navigate('Chat', {
-        otherUid: item.otherUid,
-        otherName: item.otherName,
-        otherUsername: item.otherUsername || '',
-      });
+      // Firebase real conversation
+      navigation.navigate('Chat', { conversationId: item.id, otherUid: item.otherUid, otherName: item.otherName });
     }
   };
 
+  // Merge local (services) and firebase chats
+  const allConvs = [...localConvs, ...firebaseConvs];
+  const filtered = allConvs.filter(c => 
+    (c.name || c.otherName || '').toLowerCase().includes(search.toLowerCase())
+  ).sort((a, b) => (b.lastTime || 0) - (a.lastTime || 0));
+
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-
-      {/* ── Header ── */}
+      <StatusBar barStyle={colors.isDark ? 'light-content' : 'dark-content'} />
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Messages</Text>
-          <Text style={styles.headerSub}>{allChats.length} conversation{allChats.length !== 1 ? 's' : ''}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.composeBtn}
-          onPress={() => navigation.navigate('NewChat')}
-        >
-          <Ionicons name="create-outline" size={20} color="#fff" />
+        <Text style={styles.headerTitle}>Messages</Text>
+        <TouchableOpacity style={styles.newBtn} onPress={() => navigation.navigate('NewChat')}>
+          <Ionicons name="create-outline" size={22} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* ── Search ── */}
-      <View style={styles.searchWrap}>
-        <Ionicons name="search" size={16} color={COLORS.textLight} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Rechercher…"
-          placeholderTextColor={COLORS.textLight}
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')}>
-            <Ionicons name="close-circle" size={16} color={COLORS.textLight} />
-          </TouchableOpacity>
-        )}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search-outline" size={18} color={colors.textLight} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Rechercher une discussion…"
+            placeholderTextColor={colors.textLight}
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
       </View>
 
-      {/* ── Content ── */}
       {loadingFb ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={ACCENT} size="large" />
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : filtered.length === 0 ? (
+        <View style={styles.empty}>
+          <Ionicons name="chatbubbles-outline" size={64} color={colors.line} />
+          <Text style={styles.emptyText}>Aucune discussion trouvée</Text>
         </View>
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(c) => c.id}
-          renderItem={({ item }) => <ChatRow item={item} onPress={handleChatPress} />}
-          ItemSeparatorComponent={() => <View style={styles.sep} />}
-          contentContainerStyle={styles.listContent}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <ChatRow item={item} onPress={handlePress} />}
+          contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.center}>
-              <Ionicons name="chatbubbles-outline" size={64} color="#ddd" />
-              <Text style={styles.emptyTitle}>Aucun résultat</Text>
-              <Text style={styles.emptyHint}>Essayez un autre nom</Text>
-            </View>
-          }
-          ListFooterComponent={
-            fbChatsDisplay.length === 0 ? (
-              <TouchableOpacity
-                style={styles.newChatBanner}
-                onPress={() => navigation.navigate('NewChat')}
-              >
-                <Ionicons name="person-add-outline" size={20} color={ACCENT} />
-                <Text style={styles.newChatBannerText}>
-                  Discuter avec un autre utilisateur de l'app
-                </Text>
-                <Ionicons name="chevron-forward" size={18} color={ACCENT} />
-              </TouchableOpacity>
-            ) : null
-          }
         />
       )}
     </SafeAreaView>
@@ -239,58 +170,51 @@ export default function InboxScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10, padding: 24, marginTop: 40 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#555', marginTop: 8 },
-  emptyHint: { fontSize: 14, color: '#aaa', textAlign: 'center' },
-
+const getStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: COLORS.line,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SIZES.medium,
+    paddingVertical: SIZES.small,
   },
-  headerTitle: { fontSize: 26, fontWeight: '700', color: '#111', letterSpacing: -0.5 },
-  headerSub: { ...FONTS.caption, color: ACCENT, marginTop: 2 },
-  composeBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center',
+  headerTitle: { ...FONTS.h1, color: colors.text },
+  newBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: colors.card,
+    justifyContent: 'center', alignItems: 'center',
+    ...SHADOWS.light,
   },
-
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: COLORS.card,
-    marginHorizontal: SIZES.medium, marginVertical: 10,
-    borderRadius: SIZES.radius.lg, paddingHorizontal: 14, paddingVertical: 10,
-    borderWidth: 1, borderColor: COLORS.line,
+  searchContainer: { paddingHorizontal: SIZES.medium, marginBottom: SIZES.small },
+  searchBox: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: SIZES.radius.md,
+    paddingHorizontal: 12, height: 46,
     ...SHADOWS.xs,
   },
-  searchInput: { flex: 1, ...FONTS.body1, color: COLORS.text },
-
-  listContent: { paddingBottom: 20 },
-  sep: { height: 1, backgroundColor: '#f5f5f5', marginLeft: 74 },
-
+  searchInput: { flex: 1, marginLeft: 10, ...FONTS.body1, color: colors.text },
+  list: { paddingBottom: 100 },
   chatRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', paddingHorizontal: SIZES.medium, paddingVertical: 13, gap: 12,
+    padding: SIZES.medium,
+    borderBottomWidth: 1, borderBottomColor: colors.line,
   },
-  avatar: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { fontSize: 18, fontWeight: '700' },
-  chatInfo: { flex: 1, minWidth: 0 },
-  chatTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  chatNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 4 },
-  chatName: { fontSize: 15, fontWeight: '600', color: '#111', flexShrink: 1 },
+  avatar: {
+    width: 54, height: 54, borderRadius: 27,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  avatarText: { fontSize: 20, fontWeight: '700' },
+  chatInfo: { flex: 1, marginLeft: 15 },
+  chatTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  chatNameRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  chatName: { ...FONTS.h3, color: colors.text, marginRight: 8 },
+  chatTime: { ...FONTS.caption, color: colors.textLight },
+  chatPreview: { ...FONTS.body2, color: colors.textLight },
   tagChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  tagText: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
-  chatTime: { fontSize: 11, color: '#aaa', flexShrink: 0 },
-  chatPreview: { fontSize: 13, color: '#888', marginTop: 3 },
-
-  newChatBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    margin: SIZES.medium,
-    backgroundColor: COLORS.primaryOpacity,
-    borderRadius: SIZES.radius.lg, padding: SIZES.medium,
-    borderWidth: 1, borderColor: COLORS.primary + '30',
-  },
-  newChatBannerText: { flex: 1, ...FONTS.body2, color: ACCENT, fontWeight: '600' },
+  tagText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 100 },
+  emptyText: { ...FONTS.body1, color: colors.textLight, marginTop: 10 },
 });

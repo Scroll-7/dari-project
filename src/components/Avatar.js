@@ -1,18 +1,9 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * Avatar — shows a photo or colored initials circle
- *
- * Props:
- *  uri         — image URI (optional; shows initials if absent)
- *  initials    — 1-2 letter initials string
- *  color       — initials text color
- *  bgColor     — background color (used both for bg and subtly for border)
- *  size        — diameter in pixels (default 46)
- *  onlineDot   — show green online indicator dot
- *  style       — outer container style override
  */
 export function Avatar({
   uri,
@@ -23,6 +14,8 @@ export function Avatar({
   onlineDot = false,
   style,
 }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const radius = size / 2;
   const fontSize = size * 0.34;
 
@@ -44,11 +37,11 @@ export function Avatar({
               width: size,
               height: size,
               borderRadius: radius,
-              backgroundColor: bgColor ?? COLORS.primaryOpacity,
+              backgroundColor: bgColor ?? colors.primaryOpacity,
             },
           ]}
         >
-          <Text style={[styles.initials, { color: color ?? COLORS.primary, fontSize }]}>
+          <Text style={[styles.initials, { color: color ?? colors.primary, fontSize }]}>
             {initials}
           </Text>
         </View>
@@ -71,15 +64,15 @@ export function Avatar({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   wrap:     { position: 'relative' },
   img:      { resizeMode: 'cover' },
   circle:   { justifyContent: 'center', alignItems: 'center' },
   initials: { fontWeight: '700' },
   dot: {
     position: 'absolute',
-    backgroundColor: COLORS.success,
+    backgroundColor: colors.success,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: colors.white,
   },
 });

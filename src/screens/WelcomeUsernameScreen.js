@@ -9,9 +9,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '../firebase/auth';
-import { COLORS, FONTS, SHADOWS, SIZES } from '../constants/theme';
+import { FONTS, SHADOWS, SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 export default function WelcomeUsernameScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [username, setUsername] = useState('');
   const [role, setRole] = useState('tenant'); // 'tenant' or 'landlord'
   const [isLoading, setIsLoading] = useState(false);
@@ -83,12 +86,12 @@ export default function WelcomeUsernameScreen({ navigation }) {
         <View style={styles.inner}>
           {/* Top illustration / icon */}
           <LinearGradient
-            colors={[COLORS.primary, COLORS.secondary || '#6C63FF']}
+            colors={[colors.primary, colors.secondary || '#6C63FF']}
             style={styles.iconCircle}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Ionicons name="person" size={48} color="#fff" />
+            <Ionicons name="person" size={48} color={colors.white} />
           </LinearGradient>
 
           {/* Heading */}
@@ -104,13 +107,13 @@ export default function WelcomeUsernameScreen({ navigation }) {
             <Ionicons
               name="at-outline"
               size={20}
-              color={COLORS.textLight}
+              color={colors.textLight}
               style={{ marginRight: 8 }}
             />
             <TextInput
               style={styles.input}
               placeholder="Enter your username"
-              placeholderTextColor={COLORS.textLight}
+              placeholderTextColor={colors.textLight}
               autoCapitalize="none"
               autoCorrect={false}
               value={username}
@@ -131,7 +134,7 @@ export default function WelcomeUsernameScreen({ navigation }) {
               onPress={() => setRole('tenant')}
               activeOpacity={0.8}
             >
-              <Ionicons name="search" size={24} color={role === 'tenant' ? COLORS.primary : COLORS.textLight} />
+              <Ionicons name="search" size={24} color={role === 'tenant' ? colors.primary : colors.textLight} />
               <Text style={[styles.roleText, role === 'tenant' && styles.roleTextActive]}>Chercheur</Text>
               <Text style={styles.roleSubtext}>Je cherche un bien ou coloc</Text>
             </TouchableOpacity>
@@ -141,7 +144,7 @@ export default function WelcomeUsernameScreen({ navigation }) {
               onPress={() => setRole('landlord')}
               activeOpacity={0.8}
             >
-              <Ionicons name="home" size={24} color={role === 'landlord' ? COLORS.primary : COLORS.textLight} />
+              <Ionicons name="home" size={24} color={role === 'landlord' ? colors.primary : colors.textLight} />
               <Text style={[styles.roleText, role === 'landlord' && styles.roleTextActive]}>Propriétaire</Text>
               <Text style={styles.roleSubtext}>Je propose un bien</Text>
             </TouchableOpacity>
@@ -157,7 +160,7 @@ export default function WelcomeUsernameScreen({ navigation }) {
             disabled={isLoading}
           >
             <LinearGradient
-              colors={[COLORS.primary, COLORS.secondary || '#6C63FF']}
+              colors={[colors.primary, colors.secondary || '#6C63FF']}
               style={styles.btnGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -166,7 +169,7 @@ export default function WelcomeUsernameScreen({ navigation }) {
                 {isLoading ? 'Saving…' : 'Continue'}
               </Text>
               {!isLoading && (
-                <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 8 }} />
+                <Ionicons name="arrow-forward" size={18} color={colors.white} style={{ marginLeft: 8 }} />
               )}
             </LinearGradient>
           </TouchableOpacity>
@@ -180,10 +183,10 @@ export default function WelcomeUsernameScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   inner: {
     flex: 1,
@@ -204,14 +207,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '800',
-    color: COLORS.text,
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 10,
     letterSpacing: -0.5,
   },
   subtitle: {
     ...FONTS.body1,
-    color: COLORS.textLight,
+    color: colors.textLight,
     textAlign: 'center',
     marginBottom: 36,
     lineHeight: 22,
@@ -220,7 +223,7 @@ const styles = StyleSheet.create({
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.white || '#fff',
+    backgroundColor: colors.card || colors.white,
     borderRadius: 14,
     paddingHorizontal: 16,
     height: 54,
@@ -232,7 +235,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     ...FONTS.body1,
-    color: COLORS.text,
+    color: colors.text,
     fontSize: 16,
   },
   errorText: {
@@ -244,7 +247,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     ...FONTS.h3,
-    color: COLORS.text,
+    color: colors.text,
     alignSelf: 'flex-start',
     marginTop: SIZES.large,
     marginBottom: SIZES.small,
@@ -257,7 +260,7 @@ const styles = StyleSheet.create({
   },
   roleCard: {
     flex: 1,
-    backgroundColor: COLORS.card || '#fff',
+    backgroundColor: colors.card || colors.white,
     borderRadius: 14,
     padding: 16,
     borderWidth: 2,
@@ -267,22 +270,22 @@ const styles = StyleSheet.create({
     ...SHADOWS.small,
   },
   roleCardActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryOpacity || '#F0F0FF',
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryOpacity || '#F0F0FF',
   },
   roleText: {
     ...FONTS.h3,
     fontSize: 14,
-    color: COLORS.textLight,
+    color: colors.textLight,
     marginTop: 8,
     marginBottom: 4,
   },
   roleTextActive: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   roleSubtext: {
     fontSize: 10,
-    color: COLORS.textLight,
+    color: colors.textLight,
     textAlign: 'center',
   },
   btn: {
@@ -300,14 +303,16 @@ const styles = StyleSheet.create({
   },
   btnText: {
     ...FONTS.h3,
-    color: '#fff',
+    color: colors.white,
     fontWeight: '700',
     fontSize: 16,
   },
   hint: {
     marginTop: 20,
     fontSize: 12,
-    color: COLORS.textLight,
+    color: colors.textLight,
     textAlign: 'center',
   },
 });
+
+

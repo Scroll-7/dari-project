@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 
 import { useConversations } from '../context/ConversationContext';
-import { COLORS, FONTS, SHADOWS, SIZES } from '../constants/theme';
+import { FONTS, SHADOWS, SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 // ─── Star row ────────────────────────────────────────────────────────────────
 function Stars({ count }) {
@@ -33,11 +34,15 @@ function Stars({ count }) {
 
 // ─── Section heading ─────────────────────────────────────────────────────────
 function SectionTitle({ label }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   return <Text style={styles.sectionLabel}>{label}</Text>;
 }
 
 // ─── Tag pill ────────────────────────────────────────────────────────────────
 function Tag({ text, accent = false }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   return (
     <View style={[styles.tag, accent && styles.tagAccent]}>
       <Text style={[styles.tagText, accent && styles.tagTextAccent]}>{text}</Text>
@@ -47,14 +52,16 @@ function Tag({ text, accent = false }) {
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function RoommateProfileScreen({ route }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation();
   const { openOrCreateConversation } = useConversations();
   const { roommate } = route.params;
 
   const scoreColor =
-    roommate.compatibility >= 90 ? COLORS.success :
-    roommate.compatibility >= 80 ? COLORS.primary :
-    COLORS.warning;
+    roommate.compatibility >= 90 ? colors.success :
+    roommate.compatibility >= 80 ? colors.primary :
+    colors.warning;
 
   const handleChat = () => {
     openOrCreateConversation({
@@ -67,11 +74,11 @@ export default function RoommateProfileScreen({ route }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={colors.isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       {/* ── Floating back button ── */}
       <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-        <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+        <Ionicons name="arrow-back" size={20} color={colors.text} />
       </TouchableOpacity>
 
       <ScrollView
@@ -88,7 +95,7 @@ export default function RoommateProfileScreen({ route }) {
               <Text style={styles.heroName}>{roommate.name}</Text>
               {roommate.recommended && (
                 <View style={styles.recBadge}>
-                  <Ionicons name="star" size={11} color="#fff" />
+                  <Ionicons name="star" size={11} color={colors.white} />
                   <Text style={styles.recBadgeText}>Recommandé</Text>
                 </View>
               )}
@@ -97,10 +104,10 @@ export default function RoommateProfileScreen({ route }) {
             <Text style={styles.heroRole}>{roommate.role}</Text>
 
             <View style={styles.metaRow}>
-              <Ionicons name="location-outline" size={14} color={COLORS.textLight} />
+              <Ionicons name="location-outline" size={14} color={colors.textLight} />
               <Text style={styles.metaText}>{roommate.city}</Text>
               <View style={styles.dot} />
-              <Ionicons name="person-outline" size={14} color={COLORS.textLight} />
+              <Ionicons name="person-outline" size={14} color={colors.textLight} />
               <Text style={styles.metaText}>{roommate.age} ans</Text>
             </View>
 
@@ -123,7 +130,7 @@ export default function RoommateProfileScreen({ route }) {
 
         {/* ── Budget ── */}
         <View style={styles.budgetRow}>
-          <Ionicons name="wallet-outline" size={16} color={COLORS.primary} />
+          <Ionicons name="wallet-outline" size={16} color={colors.primary} />
           <Text style={styles.budgetLabel}>Budget : </Text>
           <Text style={styles.budgetValue}>{roommate.budget}</Text>
         </View>
@@ -165,7 +172,7 @@ export default function RoommateProfileScreen({ route }) {
               <View key={exp.id} style={styles.expCard}>
                 {/* Timeline dot */}
                 <View style={styles.timelineCol}>
-                  <View style={[styles.timelineDot, { backgroundColor: COLORS.primary }]} />
+                  <View style={[styles.timelineDot, { backgroundColor: colors.primary }]} />
                   {idx < roommate.experiences.length - 1 && (
                     <View style={styles.timelineLine} />
                   )}
@@ -195,7 +202,7 @@ export default function RoommateProfileScreen({ route }) {
       {/* ── Fixed bottom action bar ── */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.chatBtn} onPress={handleChat} activeOpacity={0.85}>
-          <Ionicons name="chatbubble-ellipses" size={20} color="#fff" />
+          <Ionicons name="chatbubble-ellipses" size={20} color={colors.white} />
           <Text style={styles.chatBtnText}>Envoyer un message</Text>
         </TouchableOpacity>
       </View>
@@ -205,8 +212,8 @@ export default function RoommateProfileScreen({ route }) {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: COLORS.background },
+const getStyles = (colors) => StyleSheet.create({
+  safe:   { flex: 1, backgroundColor: colors.background },
   scroll: { padding: SIZES.medium, paddingTop: SIZES.xxl + SIZES.small },
 
   backBtn: {
@@ -216,7 +223,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
     width: 40, height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     justifyContent: 'center', alignItems: 'center',
     ...SHADOWS.light,
   },
@@ -224,7 +231,7 @@ const styles = StyleSheet.create({
   // Hero
   heroCard: {
     flexDirection: 'row',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius: SIZES.radius.xl,
     padding: SIZES.medium,
     gap: SIZES.medium,
@@ -244,7 +251,7 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 3,
   },
-  heroName: { ...FONTS.h2, color: COLORS.text, flex: 1 },
+  heroName: { ...FONTS.h2, color: colors.text, flex: 1 },
   recBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -253,16 +260,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 3,
     borderRadius: SIZES.radius.pill,
   },
-  recBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+  recBadgeText: { fontSize: 10, fontWeight: '700', color: colors.white },
 
-  heroRole: { ...FONTS.body2, color: COLORS.textLight, marginBottom: 6 },
+  heroRole: { ...FONTS.body2, color: colors.textLight, marginBottom: 6 },
 
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 10 },
-  metaText: { ...FONTS.caption, color: COLORS.textLight },
-  dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: COLORS.line },
+  metaText: { ...FONTS.caption, color: colors.textLight },
+  dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: colors.line },
 
   scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  barTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: COLORS.line, overflow: 'hidden' },
+  barTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.line, overflow: 'hidden' },
   barFill:  { height: '100%', borderRadius: 3 },
   scoreText: { ...FONTS.caption, fontWeight: '700', minWidth: 110 },
 
@@ -271,37 +278,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius: SIZES.radius.lg,
     padding: SIZES.medium,
     marginBottom: SIZES.medium,
     ...SHADOWS.xs,
   },
-  budgetLabel: { ...FONTS.body2, color: COLORS.textLight },
-  budgetValue: { ...FONTS.body2, fontWeight: '700', color: COLORS.primary },
+  budgetLabel: { ...FONTS.body2, color: colors.textLight },
+  budgetValue: { ...FONTS.body2, fontWeight: '700', color: colors.primary },
 
   // Sections
   section: { marginBottom: SIZES.large },
   sectionLabel: {
     ...FONTS.label,
-    color: COLORS.textLight,
+    color: colors.textLight,
     marginBottom: SIZES.small,
   },
-  bio: { ...FONTS.body1, color: COLORS.textBody, lineHeight: 24 },
+  bio: { ...FONTS.body1, color: colors.textBody, lineHeight: 24 },
 
   // Tags
   tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tag: {
     paddingHorizontal: 12, paddingVertical: 6,
     borderRadius: SIZES.radius.pill,
-    backgroundColor: COLORS.line,
+    backgroundColor: colors.line,
   },
-  tagText: { ...FONTS.caption, color: COLORS.textBody, fontWeight: '600' },
-  tagAccent: { backgroundColor: COLORS.primaryOpacity },
-  tagTextAccent: { color: COLORS.primary },
+  tagText: { ...FONTS.caption, color: colors.textBody, fontWeight: '600' },
+  tagAccent: { backgroundColor: colors.primaryOpacity },
+  tagTextAccent: { color: colors.primary },
 
   // Experiences timeline
-  noExp: { ...FONTS.body2, color: COLORS.textLight },
+  noExp: { ...FONTS.body2, color: colors.textLight },
   expCard: {
     flexDirection: 'row',
     gap: SIZES.medium,
@@ -314,12 +321,12 @@ const styles = StyleSheet.create({
   },
   timelineLine: {
     flex: 1, width: 2,
-    backgroundColor: COLORS.line,
+    backgroundColor: colors.line,
     marginTop: 4,
   },
   expContent: {
     flex: 1,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius: SIZES.radius.lg,
     padding: 14,
     ...SHADOWS.xs,
@@ -331,28 +338,28 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 2,
   },
-  expPlace:    { ...FONTS.h3, color: COLORS.text, flex: 1, marginRight: 8 },
-  expYear:     { ...FONTS.caption, color: COLORS.textLight },
-  expDuration: { ...FONTS.body2, color: COLORS.textLight, marginBottom: 6 },
-  expNote:     { ...FONTS.body2, color: COLORS.textBody, marginTop: 6, fontStyle: 'italic' },
+  expPlace:    { ...FONTS.h3, color: colors.text, flex: 1, marginRight: 8 },
+  expYear:     { ...FONTS.caption, color: colors.textLight },
+  expDuration: { ...FONTS.body2, color: colors.textLight, marginBottom: 6 },
+  expNote:     { ...FONTS.body2, color: colors.textBody, marginTop: 6, fontStyle: 'italic' },
 
   // Bottom bar
   bottomBar: {
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     paddingHorizontal: SIZES.medium,
     paddingVertical: SIZES.medium,
     paddingBottom: SIZES.large,
     borderTopWidth: 1,
-    borderTopColor: COLORS.line,
+    borderTopColor: colors.line,
   },
   chatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: SIZES.radius.pill,
     paddingVertical: 14,
     ...SHADOWS.card,
@@ -360,6 +367,6 @@ const styles = StyleSheet.create({
   chatBtnText: {
     ...FONTS.body1,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
 });

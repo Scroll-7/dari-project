@@ -20,7 +20,8 @@ import { getFirestore, collection, query, orderBy, onSnapshot } from 'firebase/f
 import { getOrCreateConversation } from '../firebase/chat';
 import { FilterPill } from '../components/FilterPill';
 import { StarRating } from '../components/StarRating';
-import { COLORS, FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 const db = getFirestore();
 
@@ -59,7 +60,7 @@ export const ROOMMATES = [
     bio: 'Développeur travaillant à distance. Calme, rangé et autonome.',
     budget: '500 – 800 DT/mois',
     interests: ['Technologie', 'Gaming', 'Running', 'Musique'],
-    habits: ['Non-fumeur', 'Noctambule', 'Pas d\'animaux'],
+    habits: ['Non-fumeur', 'Noctambule', "Pas d'animaux"],
     experiences: [
       { id: 'e1', place: 'Studio partagé, Menzah', duration: '1,5 an', year: '2022–2024', rating: 5, note: '' },
     ],
@@ -95,7 +96,7 @@ export const ROOMMATES = [
     bio: 'Professionnelle sérieuse, recherche une colocation calme et propre.',
     budget: '600 – 900 DT/mois',
     interests: ['Droit', 'Podcast', 'Jardinage', 'Natation'],
-    habits: ['Non-fumeur', 'Couche-tôt', 'Pas d\'animaux'],
+    habits: ['Non-fumeur', 'Couche-tôt', "Pas d'animaux"],
     experiences: [
       { id: 'e1', place: 'Appart. 2ch Centre-ville', duration: '2 ans', year: '2022–2024', rating: 5, note: '' },
     ],
@@ -110,7 +111,7 @@ export const ROOMMATES = [
     recommended: false,
     rating: 4.3,
     image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
-    bio: 'Architecte passionné par le design et l\'art. Je cherche un logement côtier.',
+    bio: "Architecte passionné par le design et l'art. Je cherche un logement côtier.",
     budget: '500 – 750 DT/mois',
     interests: ['Architecture', 'Surf', 'Cinéma', 'Voyages'],
     habits: ['Fumeur (ext.)', 'Noctambule', 'Animaux OK'],
@@ -120,13 +121,24 @@ export const ROOMMATES = [
   },
 ];
 
+// ─── Avatar color helper ──────────────────────────────────────────────────────
+
+const AVATAR_PALETTE = ['#4461F2', '#E83E8C', '#20C997', '#FD7E14', '#6F42C1', '#FFC107'];
+function pickAvatarColor(name = '') {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + h * 31;
+  return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+}
+
 // ─── CompatRing ───────────────────────────────────────────────────────────────
 
 function CompatRing({ score }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const color =
-    score >= 90 ? COLORS.success :
-    score >= 80 ? COLORS.primary :
-    COLORS.warning;
+    score >= 90 ? colors.success :
+    score >= 80 ? colors.primary :
+    colors.warning;
 
   return (
     <View style={styles.ringWrap}>
@@ -141,21 +153,16 @@ function CompatRing({ score }) {
 // ─── RoommateCard ─────────────────────────────────────────────────────────────
 
 function RoommateCard({ item, onPress, onChat }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const initials = item.name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
-  const AVATAR_COLORS = ['#4461F2','#E83E8C','#20C997','#FD7E14','#6F42C1','#FFC107'];
-  const pickColor = (name = '') => {
-    let h = 0;
-    for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + h * 31;
-    return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
-  };
-  const avatarColor = pickColor(item.name);
-
+  const avatarColor = pickAvatarColor(item.name);
   const CardContainer = item.isReal ? View : TouchableOpacity;
 
   return (
-    <CardContainer 
-      style={styles.card} 
-      onPress={item.isReal ? undefined : onPress} 
+    <CardContainer
+      style={styles.card}
+      onPress={item.isReal ? undefined : onPress}
       activeOpacity={item.isReal ? undefined : 0.88}
     >
       {/* Left: photo or initials */}
@@ -169,7 +176,7 @@ function RoommateCard({ item, onPress, onChat }) {
         )}
         {item.recommended && (
           <View style={styles.recDot}>
-            <Ionicons name="star" size={9} color="#fff" />
+            <Ionicons name="star" size={9} color={colors.white} />
           </View>
         )}
         {item.isReal && (
@@ -215,7 +222,7 @@ function RoommateCard({ item, onPress, onChat }) {
           onPress={(e) => { e.stopPropagation?.(); onChat(item); }}
           activeOpacity={0.8}
         >
-          <Ionicons name="chatbubble-ellipses" size={16} color={COLORS.primary} />
+          <Ionicons name="chatbubble-ellipses" size={16} color={colors.primary} />
         </TouchableOpacity>
       </View>
     </CardContainer>
@@ -225,19 +232,19 @@ function RoommateCard({ item, onPress, onChat }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function RoommatesScreen() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation();
   const myUid = getAuth().currentUser?.uid;
   const [filter, setFilter] = useState('all');
   const [realPosts, setRealPosts] = useState([]);
   const [loadingReal, setLoadingReal] = useState(true);
 
-  // Subscribe to real Firestore roommate posts
   useEffect(() => {
     const q = query(collection(db, 'roommatePosts'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       const posts = snap.docs
         .map((d) => ({ firestoreId: d.id, ...d.data() }))
-        // Don't show the current user's own post
         .filter((p) => p.uid !== myUid);
       setRealPosts(posts);
       setLoadingReal(false);
@@ -245,7 +252,6 @@ export default function RoommatesScreen() {
     return unsub;
   }, [myUid]);
 
-  // Convert Firestore posts to the card format
   const realAsCards = realPosts.map((p) => ({
     id: `real_${p.firestoreId}`,
     uid: p.uid,
@@ -254,44 +260,32 @@ export default function RoommatesScreen() {
     role: p.description?.slice(0, 50) || 'Cherche colocation',
     age: null,
     city: p.city || '',
-    compatibility: null,         // no algo for real posts
+    compatibility: null,
     recommended: false,
     rating: null,
-    image: null,                 // no image for now
+    image: null,
     bio: p.description || '',
     budget: p.budget || '',
     interests: p.interests || [],
     habits: p.habits || [],
     experiences: [],
-    isReal: true,                // flag to distinguish from mock
+    isReal: true,
   }));
 
-  // Combine: real posts first, then mock
   const combined = [...realAsCards, ...ROOMMATES.map((r) => ({ ...r, isReal: false }))];
 
   const handleChat = async (item) => {
     if (item.isReal) {
       try {
-        if (!myUid) {
-          Alert.alert('Erreur', 'Vous n\'êtes pas connecté.');
-          return;
-        }
-        if (!item.uid) {
-          Alert.alert('Erreur', 'L\'utilisateur n\'a pas d\'ID.');
-          return;
-        }
+        if (!myUid) { Alert.alert('Erreur', "Vous n'êtes pas connecté."); return; }
+        if (!item.uid) { Alert.alert('Erreur', "L'utilisateur n'a pas d'ID."); return; }
         await getOrCreateConversation(myUid, item.uid);
-        navigation.navigate('Chat', {
-          otherUid: item.uid,
-          otherName: item.name,
-          otherUsername: item.username,
-        });
+        navigation.navigate('Chat', { otherUid: item.uid, otherName: item.name, otherUsername: item.username });
       } catch (e) {
         console.error('Chat error:', e);
         Alert.alert('Erreur', e.message);
       }
     } else {
-      // Mock roommate → keep existing local behavior
       navigation.navigate('Chat', { personId: `roommate_${item.id}` });
     }
   };
@@ -303,7 +297,7 @@ export default function RoommatesScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={colors.isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       {/* ── Header ── */}
       <View style={styles.header}>
@@ -312,7 +306,7 @@ export default function RoommatesScreen() {
           <Text style={styles.subtitle}>{data.length} suggestions pour vous</Text>
         </View>
         <TouchableOpacity style={styles.filterIconBtn} activeOpacity={0.8}>
-          <Ionicons name="options-outline" size={20} color={COLORS.text} />
+          <Ionicons name="options-outline" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -333,7 +327,7 @@ export default function RoommatesScreen() {
 
       {/* ── List ── */}
       {loadingReal ? (
-        <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={data}
@@ -355,23 +349,22 @@ export default function RoommatesScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
+const getStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
 
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
     paddingHorizontal: SIZES.medium,
     paddingTop: SIZES.large, paddingBottom: SIZES.small,
   },
-  title:    { ...FONTS.h1, color: COLORS.text },
-  subtitle: { ...FONTS.body2, color: COLORS.textLight, marginTop: 4 },
+  title:    { ...FONTS.h1, color: colors.text },
+  subtitle: { ...FONTS.body2, color: colors.textLight, marginTop: 4 },
   filterIconBtn: {
     width: 42, height: 42, borderRadius: SIZES.radius.md,
-    backgroundColor: COLORS.card, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.card, justifyContent: 'center', alignItems: 'center',
     ...SHADOWS.light,
   },
 
-  // Tip banner
   tipBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: SIZES.medium, borderRadius: SIZES.radius.lg,
@@ -379,71 +372,56 @@ const styles = StyleSheet.create({
   },
   tipText: { flex: 1, fontSize: 11, color: 'rgba(255,255,255,0.9)', lineHeight: 16 },
 
-  // Filter row
   filterRow: { marginBottom: SIZES.medium },
-
-  // List
   list: { paddingHorizontal: SIZES.medium, paddingBottom: 100 },
 
-  // Card
   card: {
     flexDirection: 'row', alignItems: 'flex-start',
-    backgroundColor: COLORS.card, borderRadius: SIZES.radius.xl,
+    backgroundColor: colors.card, borderRadius: SIZES.radius.xl,
     padding: 12, marginBottom: SIZES.medium, gap: 10,
     ...SHADOWS.light,
   },
 
-  photoWrap: { position: 'relative' },
-  photo: { width: 70, height: 70, borderRadius: SIZES.radius.lg },
-  photoInitials: { justifyContent: 'center', alignItems: 'center' },
+  photoWrap:         { position: 'relative' },
+  photo:             { width: 70, height: 70, borderRadius: SIZES.radius.lg },
+  photoInitials:     { justifyContent: 'center', alignItems: 'center' },
   photoInitialsText: { fontSize: 24, fontWeight: '800' },
   recDot: {
     position: 'absolute', bottom: -2, right: -2,
     width: 18, height: 18, borderRadius: 9,
     backgroundColor: '#F59E0B',
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: COLORS.card,
+    borderWidth: 2, borderColor: colors.card,
   },
   realBadge: {
     position: 'absolute', top: -4, left: -4,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 5, paddingVertical: 2,
     borderRadius: 6,
   },
-  realBadgeText: { fontSize: 8, color: '#fff', fontWeight: '800' },
-  budgetText: { fontSize: 11, color: COLORS.textLight, marginTop: 3 },
+  realBadgeText: { fontSize: 8, color: colors.white, fontWeight: '800' },
+  budgetText:    { fontSize: 11, color: colors.textLight, marginTop: 3 },
 
-  info: { flex: 1, minWidth: 0 },
+  info:    { flex: 1, minWidth: 0 },
   nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginBottom: 3 },
-  name: { ...FONTS.h3, color: COLORS.text },
-  recTag: {
-    backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2,
-    borderRadius: SIZES.radius.pill,
-  },
+  name:    { ...FONTS.h3, color: colors.text },
+  recTag:  { backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: SIZES.radius.pill },
   recTagText: { fontSize: 9, fontWeight: '700', color: '#D97706' },
-  role: { ...FONTS.caption, color: COLORS.textLight, marginBottom: 4 },
+  role:    { ...FONTS.caption, color: colors.textLight, marginBottom: 4 },
 
-  pillScroll: { flexGrow: 0 },
-  interestPill: {
-    backgroundColor: COLORS.primaryOpacity, paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: SIZES.radius.pill,
-  },
-  interestText: { fontSize: 10, color: COLORS.primary, fontWeight: '600' },
+  pillScroll:    { flexGrow: 0 },
+  interestPill:  { backgroundColor: colors.primaryOpacity, paddingHorizontal: 8, paddingVertical: 3, borderRadius: SIZES.radius.pill },
+  interestText:  { fontSize: 10, color: colors.primary, fontWeight: '600' },
 
-  // Right column: compat ring + chat
-  rightCol: { alignItems: 'center', gap: 8 },
-  ringWrap: { alignItems: 'center' },
-  ringOuter: {
-    width: 48, height: 48, borderRadius: 24,
-    borderWidth: 3, justifyContent: 'center', alignItems: 'center',
-    flexDirection: 'row',
-  },
+  rightCol:  { alignItems: 'center', gap: 8 },
+  ringWrap:  { alignItems: 'center' },
+  ringOuter: { width: 48, height: 48, borderRadius: 24, borderWidth: 3, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' },
   ringScore: { fontSize: 13, fontWeight: '800' },
-  ringPct:   { fontSize: 8,  fontWeight: '600', color: COLORS.textLight },
+  ringPct:   { fontSize: 8, fontWeight: '600', color: colors.textLight },
 
   chatBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: COLORS.primaryOpacity,
+    backgroundColor: colors.primaryOpacity,
     justifyContent: 'center', alignItems: 'center',
   },
 });

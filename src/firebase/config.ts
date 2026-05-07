@@ -1,34 +1,31 @@
-import { initializeApp, getApps } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-let firestore: ReturnType<typeof getFirestore> | null = null;
+const firebaseConfig = {
+  apiKey: "AIzaSyBo0kbbnJBDBv-ShS1dg_BpIuMyLkrOVoI",
+  authDomain: "dari-app-70704.firebaseapp.com",
+  projectId: "dari-app-70704",
+  storageBucket: "dari-app-70704.firebasestorage.app",
+  messagingSenderId: "742100137395",
+  appId: "1:742100137395:web:1dc2b159a7fe9596da87c6",
+  measurementId: "G-4H3T7EJ7N9"
+};
 
 /**
- * Call this once on app startup. Replace the config values with your Firebase project config.
+ * Initialize Firebase once and return the app instance.
+ * Calling this multiple times is safe — it returns the existing app.
  */
 export function initFirebase() {
   if (getApps().length === 0) {
-    const firebaseConfig = {
-      apiKey: "AIzaSyBo0kbbnJBDBv-ShS1dg_BpIuMyLkrOVoI",
-      authDomain: "dari-app-70704.firebaseapp.com",
-      projectId: "dari-app-70704",
-      storageBucket: "dari-app-70704.firebasestorage.app",
-      messagingSenderId: "742100137395",
-      appId: "1:742100137395:web:1dc2b159a7fe9596da87c6",
-      measurementId: "G-4H3T7EJ7N9"
-    };
-    initializeApp(firebaseConfig);
+    return initializeApp(firebaseConfig);
   }
-  if (!firestore) {
-    firestore = getFirestore();
-  }
+  return getApp();
 }
 
 /**
- * Example: write a test message to a `messages` collection.
+ * Write a test message to the `messages` collection.
  */
 export async function sendTestMessage(payload: { text: string; user?: string }) {
-  if (!firestore) initFirebase();
   return await addDoc(collection(getFirestore(), 'messages'), {
     text: payload.text,
     user: payload.user ?? 'anonymous',

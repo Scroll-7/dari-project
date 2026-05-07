@@ -12,8 +12,9 @@ import {
   View,
 } from 'react-native';
 
-import { COLORS, FONTS, SHADOWS, SIZES } from '../constants/theme';
+import { FONTS, SHADOWS, SIZES } from '../constants/theme';
 import { useConversations } from '../context/ConversationContext';
+import { useTheme } from '../context/ThemeContext';
 
 // ──────────────────────────────────────────────
 // Mock provider data per service category
@@ -193,6 +194,8 @@ const SERVICE_ICONS = {
 // Star rating component
 // ──────────────────────────────────────────────
 function StarRating({ rating }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   return (
     <View style={styles.starRow}>
       {[1, 2, 3, 4, 5].map((star) => (
@@ -213,6 +216,8 @@ function StarRating({ rating }) {
 // Provider card
 // ──────────────────────────────────────────────
 function ProviderCard({ provider, navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { openOrCreateConversation } = useConversations();
 
   const handleChat = () => {
@@ -264,7 +269,7 @@ function ProviderCard({ provider, navigation }) {
           <View style={styles.nameRow}>
             <Text style={styles.providerName} numberOfLines={1}>{provider.name}</Text>
             <View style={[styles.badge, provider.available ? styles.badgeAvail : styles.badgeBusy]}>
-              <Text style={[styles.badgeText, { color: provider.available ? COLORS.success : '#EF233C' }]}>
+              <Text style={[styles.badgeText, { color: provider.available ? colors.success : '#EF233C' }]}>
                 {provider.available ? 'Disponible' : 'Occupé'}
               </Text>
             </View>
@@ -274,7 +279,7 @@ function ProviderCard({ provider, navigation }) {
           <Text style={styles.reviewsText}>{provider.reviews} avis</Text>
 
           <View style={styles.tagRow}>
-            <Ionicons name="time-outline" size={13} color={COLORS.textLight} />
+            <Ionicons name="time-outline" size={13} color={colors.textLight} />
             <Text style={styles.tagText}>{provider.experience} d'exp.</Text>
           </View>
 
@@ -295,17 +300,17 @@ function ProviderCard({ provider, navigation }) {
         <View style={styles.btnRow}>
           {/* Chat */}
           <TouchableOpacity style={styles.btnChat} onPress={handleChat} activeOpacity={0.8}>
-            <Ionicons name="chatbubble-ellipses" size={17} color={COLORS.primary} />
+            <Ionicons name="chatbubble-ellipses" size={17} color={colors.primary} />
           </TouchableOpacity>
 
           {/* WhatsApp */}
           <TouchableOpacity style={styles.btnWA} onPress={handleWhatsApp} activeOpacity={0.8}>
-            <Ionicons name="logo-whatsapp" size={18} color="#fff" />
+            <Ionicons name="logo-whatsapp" size={18} color={colors.white} />
           </TouchableOpacity>
 
           {/* Call */}
           <TouchableOpacity style={styles.btnCall} onPress={handleCall} activeOpacity={0.8}>
-            <Ionicons name="call" size={16} color="#fff" />
+            <Ionicons name="call" size={16} color={colors.white} />
             <Text style={styles.btnCallText}>Appeler</Text>
           </TouchableOpacity>
         </View>
@@ -318,6 +323,8 @@ function ProviderCard({ provider, navigation }) {
 // Main screen
 // ──────────────────────────────────────────────
 export default function ServiceProvidersScreen({ route, navigation }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { service } = route.params; // e.g. { title: 'Plumbing', icon: 'water-outline' }
   const [sortBy, setSortBy] = useState('rating'); // 'rating' | 'price'
 
@@ -332,17 +339,17 @@ export default function ServiceProvidersScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
-          <View style={[styles.headerIcon, { backgroundColor: COLORS.accent + '18' }]}>
-            <Ionicons name={service.icon} size={22} color={COLORS.accent} />
+          <View style={[styles.headerIcon, { backgroundColor: colors.accent + '18' }]}>
+            <Ionicons name={service.icon} size={22} color={colors.accent} />
           </View>
           <View>
             <Text style={styles.headerTitle}>{service.title}</Text>
@@ -384,8 +391,8 @@ export default function ServiceProvidersScreen({ route, navigation }) {
 // ──────────────────────────────────────────────
 // Styles
 // ──────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+const getStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
 
   // Header
   header: {
@@ -397,7 +404,7 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.card,
     justifyContent: 'center', alignItems: 'center',
     marginRight: SIZES.medium,
     ...SHADOWS.light,
@@ -408,8 +415,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     marginRight: SIZES.small,
   },
-  headerTitle: { ...FONTS.h2, color: COLORS.text },
-  headerSub: { ...FONTS.caption, color: COLORS.textLight, marginTop: 2 },
+  headerTitle: { ...FONTS.h2, color: colors.text },
+  headerSub: { ...FONTS.caption, color: colors.textLight, marginTop: 2 },
 
   // Sort
   sortRow: {
@@ -417,23 +424,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: SIZES.medium, paddingVertical: SIZES.small,
     gap: 8,
   },
-  sortLabel: { ...FONTS.caption, color: COLORS.textLight, marginRight: 4 },
+  sortLabel: { ...FONTS.caption, color: colors.textLight, marginRight: 4 },
   pill: {
     paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: SIZES.radius.pill, backgroundColor: COLORS.card,
+    borderRadius: SIZES.radius.pill, backgroundColor: colors.card,
     borderWidth: 1.5, borderColor: 'transparent',
     ...SHADOWS.xs,
   },
-  pillActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryOpacity },
-  pillText: { ...FONTS.caption, color: COLORS.textLight, fontWeight: '600' },
-  pillTextActive: { color: COLORS.primary },
+  pillActive: { borderColor: colors.primary, backgroundColor: colors.primaryOpacity },
+  pillText: { ...FONTS.caption, color: colors.textLight, fontWeight: '600' },
+  pillTextActive: { color: colors.primary },
 
   // List
   listContent: { padding: SIZES.medium, paddingBottom: 100 },
 
   // Card
   card: {
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius: SIZES.radius.xl,
     marginBottom: SIZES.medium,
     padding: SIZES.medium,
@@ -452,7 +459,7 @@ const styles = StyleSheet.create({
   // Info block
   infoBlock: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  providerName: { ...FONTS.h3, color: COLORS.text, flex: 1, marginRight: 8 },
+  providerName: { ...FONTS.h3, color: colors.text, flex: 1, marginRight: 8 },
 
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   badgeAvail: { backgroundColor: '#4CAF5020' },
@@ -460,26 +467,26 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 10, fontWeight: '700' },
 
   starRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
-  ratingText: { fontSize: 12, fontWeight: '700', color: COLORS.text, marginLeft: 4 },
-  reviewsText: { ...FONTS.caption, color: COLORS.textLight, marginBottom: 4 },
+  ratingText: { fontSize: 12, fontWeight: '700', color: colors.text, marginLeft: 4 },
+  reviewsText: { ...FONTS.caption, color: colors.textLight, marginBottom: 4 },
 
   tagRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  tagText: { ...FONTS.caption, color: COLORS.textLight, marginLeft: 4 },
+  tagText: { ...FONTS.caption, color: colors.textLight, marginLeft: 4 },
 
-  specialty: { ...FONTS.caption, color: COLORS.textLight, lineHeight: 16 },
+  specialty: { ...FONTS.caption, color: colors.textLight, lineHeight: 16 },
 
   // Divider
-  divider: { height: 1, backgroundColor: COLORS.line, marginVertical: SIZES.small },
+  divider: { height: 1, backgroundColor: colors.line, marginVertical: SIZES.small },
 
   // Card bottom
   cardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  priceLabel: { fontSize: 10, fontWeight: '600', color: COLORS.textLight, textTransform: 'uppercase', letterSpacing: 0.5 },
-  price: { ...FONTS.body2, fontWeight: '700', color: COLORS.primary, marginTop: 2 },
+  priceLabel: { fontSize: 10, fontWeight: '600', color: colors.textLight, textTransform: 'uppercase', letterSpacing: 0.5 },
+  price: { ...FONTS.body2, fontWeight: '700', color: colors.primary, marginTop: 2 },
 
   btnRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   btnChat: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: COLORS.primaryOpacity,
+    backgroundColor: colors.primaryOpacity,
     justifyContent: 'center', alignItems: 'center',
     ...SHADOWS.light,
   },
@@ -491,10 +498,12 @@ const styles = StyleSheet.create({
   },
   btnCall: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 16, paddingVertical: 10,
     borderRadius: 20, gap: 6,
     ...SHADOWS.light,
   },
-  btnCallText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  btnCallText: { color: colors.white, fontSize: 13, fontWeight: '700' },
 });
+
+
