@@ -25,7 +25,7 @@ const AVATAR_COLORS = ['#4461F2','#E83E8C','#20C997','#FD7E14','#6F42C1','#FFC10
 function pickColor(name = '') {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + h * 31;
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_colors.length];
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
 }
 
 export default function NewChatScreen({ navigation }) {
