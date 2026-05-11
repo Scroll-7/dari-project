@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -13,35 +13,35 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import PropertyCard from '../components/PropertyCard';
 import { FilterPill } from '../components/FilterPill';
-import { PROPERTIES, CITIES } from '../constants/mockData';
+import PropertyCard from '../components/PropertyCard';
+import { CITIES, PROPERTIES } from '../constants/mockData';
 import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 
 // ─── Static config ────────────────────────────────────────────────────────────
 
 const TYPE_FILTERS = [
-  { label: 'Tous',       value: 'all'       },
-  { label: 'Appart.',    value: 'apartment' },
-  { label: 'Maisons',   value: 'house'     },
-  { label: 'Chambres',  value: 'room'      },
-  { label: 'Commerce',  value: 'commercial' },
+  { label: 'Tous', value: 'all' },
+  { label: 'Appart.', value: 'apartment' },
+  { label: 'Maisons', value: 'house' },
+  { label: 'Chambres', value: 'room' },
+  { label: 'Commerce', value: 'commercial' },
 ];
 
 const PRICE_RANGES = [
-  { label: 'Tous prix', min: 0,    max: Infinity },
-  { label: '< 800 TND', min: 0,    max: 799      },
-  { label: '800–2000',  min: 800,  max: 2000     },
-  { label: '> 2000 TND',min: 2001, max: Infinity },
+  { label: 'Tous prix', min: 0, max: Infinity },
+  { label: '< 800 TND', min: 0, max: 799 },
+  { label: '800–2000', min: 800, max: 2000 },
+  { label: '> 2000 TND', min: 2001, max: Infinity },
 ];
 
 const SORT_OPTIONS = [
-  { label: 'Pertinence',  value: 'default'   },
-  { label: 'Prix ↑',      value: 'price_asc' },
-  { label: 'Prix ↓',      value: 'price_desc'},
-  { label: 'Plus récent', value: 'newest'    },
-  { label: 'Surface ↑',   value: 'area'      },
+  { label: 'Pertinence', value: 'default' },
+  { label: 'Prix ↑', value: 'price_asc' },
+  { label: 'Prix ↓', value: 'price_desc' },
+  { label: 'Plus récent', value: 'newest' },
+  { label: 'Surface ↑', value: 'area' },
 ];
 
 const RECENT_SEARCHES = ['Tunis', 'La Marsa', 'Sfax', 'Sousse'];
@@ -51,13 +51,13 @@ const RECENT_SEARCHES = ['Tunis', 'La Marsa', 'Sfax', 'Sousse'];
 export default function SearchScreen({ navigation }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
-  const [query, setQuery]           = useState('');
+  const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [priceIdx, setPriceIdx]     = useState(0);
-  const [sortBy, setSortBy]         = useState('default');
-  const [showSuggs, setShowSuggs]   = useState(false);
+  const [priceIdx, setPriceIdx] = useState(0);
+  const [sortBy, setSortBy] = useState('default');
+  const [showSuggs, setShowSuggs] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
-  const [viewMode, setViewMode]     = useState('list'); // 'list' | 'grid'
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
 
   const citySuggestions = useMemo(() => {
     if (!query) return [];
@@ -67,19 +67,19 @@ export default function SearchScreen({ navigation }) {
   const results = useMemo(() => {
     const pf = PRICE_RANGES[priceIdx];
     let arr = PROPERTIES.filter((p) => {
-      const matchCity  = query
+      const matchCity = query
         ? p.city.toLowerCase().includes(query.toLowerCase()) ||
-          p.neighborhood.toLowerCase().includes(query.toLowerCase())
+        p.neighborhood.toLowerCase().includes(query.toLowerCase())
         : true;
-      const matchType  = typeFilter === 'all' || p.type === typeFilter;
+      const matchType = typeFilter === 'all' || p.type === typeFilter;
       const matchPrice = p.price >= pf.min && p.price <= pf.max;
       return matchCity && matchType && matchPrice;
     });
 
-    if (sortBy === 'price_asc')  arr = arr.sort((a, b) => a.price - b.price);
+    if (sortBy === 'price_asc') arr = arr.sort((a, b) => a.price - b.price);
     if (sortBy === 'price_desc') arr = arr.sort((a, b) => b.price - a.price);
-    if (sortBy === 'area')       arr = arr.sort((a, b) => (b.area ?? 0) - (a.area ?? 0));
-    if (sortBy === 'newest')     arr = arr.slice().reverse();
+    if (sortBy === 'area') arr = arr.sort((a, b) => (b.area ?? 0) - (a.area ?? 0));
+    if (sortBy === 'newest') arr = arr.slice().reverse();
 
     return arr;
   }, [query, typeFilter, priceIdx, sortBy]);
@@ -91,8 +91,8 @@ export default function SearchScreen({ navigation }) {
 
   const activeFiltersCount =
     (typeFilter !== 'all' ? 1 : 0) +
-    (priceIdx   !== 0     ? 1 : 0) +
-    (sortBy     !== 'default' ? 1 : 0);
+    (priceIdx !== 0 ? 1 : 0) +
+    (sortBy !== 'default' ? 1 : 0);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -152,32 +152,35 @@ export default function SearchScreen({ navigation }) {
 
       {/* ── Recent searches (shown when query is empty) ── */}
       {!query && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentRow} contentContainerStyle={{ gap: 8, paddingHorizontal: SIZES.medium }}>
-          {RECENT_SEARCHES.map((r) => (
-            <TouchableOpacity key={r} style={styles.recentChip} onPress={() => setQuery(r)}>
-              <Ionicons name="time-outline" size={12} color={colors.textLight} />
-              <Text style={styles.recentText}>{r}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={styles.recentRowWrap}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: SIZES.medium }}>
+            {RECENT_SEARCHES.map((r) => (
+              <TouchableOpacity key={r} style={styles.recentChip} onPress={() => setQuery(r)}>
+                <Ionicons name="time-outline" size={12} color={colors.textLight} />
+                <Text style={styles.recentText}>{r}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       )}
 
       {/* ── Type filter row ── */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.typeRow}
-        contentContainerStyle={{ gap: 8, paddingHorizontal: SIZES.medium }}
-      >
-        {TYPE_FILTERS.map((t) => (
-          <FilterPill
-            key={t.value}
-            label={t.label}
-            active={typeFilter === t.value}
-            onPress={() => setTypeFilter(t.value)}
-          />
-        ))}
-      </ScrollView>
+      <View style={styles.typeRowWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: SIZES.medium }}
+        >
+          {TYPE_FILTERS.map((t) => (
+            <FilterPill
+              key={t.value}
+              label={t.label}
+              active={typeFilter === t.value}
+              onPress={() => setTypeFilter(t.value)}
+            />
+          ))}
+        </ScrollView>
+      </View>
 
       {/* ── Result count + view toggle ── */}
       <View style={styles.resultBar}>
@@ -307,7 +310,7 @@ const getStyles = (colors) => StyleSheet.create({
   suggText: { ...FONTS.body1, color: colors.text },
 
   // Recent searches
-  recentRow: { marginVertical: 8 },
+  recentRowWrap: { paddingVertical: 6, marginVertical: 4 },
   recentChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: colors.card, borderRadius: SIZES.radius.pill,
@@ -317,7 +320,7 @@ const getStyles = (colors) => StyleSheet.create({
   recentText: { ...FONTS.caption, color: colors.textLight },
 
   // Type filter row
-  typeRow: { marginBottom: 8 },
+  typeRowWrap: { paddingVertical: 6, marginBottom: 8 },
 
   // Result bar
   resultBar: {
@@ -333,7 +336,7 @@ const getStyles = (colors) => StyleSheet.create({
   toggleBtnActive: { backgroundColor: colors.primaryOpacity },
 
   // List
-  list:     { paddingHorizontal: SIZES.medium, paddingBottom: 100 },
+  list: { paddingHorizontal: SIZES.medium, paddingBottom: 100 },
   listGrid: { paddingBottom: 100 },
   gridCell: { flex: 1, margin: 6 },
 
@@ -367,7 +370,7 @@ const getStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
   },
   resetText: { ...FONTS.body1, color: colors.text, fontWeight: '600' },
-  applyBtn:  { flex: 2, borderRadius: SIZES.radius.lg, overflow: 'hidden', ...SHADOWS.glow },
+  applyBtn: { flex: 2, borderRadius: SIZES.radius.lg, overflow: 'hidden', ...SHADOWS.glow },
   applyGrad: { paddingVertical: 14, alignItems: 'center' },
   applyText: { ...FONTS.body1, color: colors.white, fontWeight: '700' },
 });
