@@ -319,11 +319,13 @@ export default function RoommatesScreen() {
       </LinearGradient>
 
       {/* ── Filter pills ── */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: SIZES.medium }}>
-        <FilterPill label="Tous"           active={filter === 'all'}         onPress={() => setFilter('all')} />
-        <FilterPill label="⭐ Recommandés" active={filter === 'recommended'} onPress={() => setFilter('recommended')} />
-        <FilterPill label="🔥 > 85%"       active={filter === 'high_compat'} onPress={() => setFilter('high_compat')} />
-      </ScrollView>
+      <View style={styles.filterRowWrap}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: SIZES.medium }}>
+          <FilterPill label="Tous"           active={filter === 'all'}         onPress={() => setFilter('all')} />
+          <FilterPill label="⭐ Recommandés" active={filter === 'recommended'} onPress={() => setFilter('recommended')} />
+          <FilterPill label="🔥 > 85%"       active={filter === 'high_compat'} onPress={() => setFilter('high_compat')} />
+        </ScrollView>
+      </View>
 
       {/* ── List ── */}
       {loadingReal ? (
@@ -372,7 +374,7 @@ const getStyles = (colors) => StyleSheet.create({
   },
   tipText: { flex: 1, fontSize: 11, color: 'rgba(255,255,255,0.9)', lineHeight: 16 },
 
-  filterRow: { marginBottom: SIZES.medium },
+  filterRowWrap: { paddingVertical: 6, marginBottom: SIZES.small },
   list: { paddingHorizontal: SIZES.medium, paddingBottom: 100 },
 
   card: {
