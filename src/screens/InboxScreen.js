@@ -127,7 +127,12 @@ export default function InboxScreen() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle={colors.isDark ? 'light-content' : 'dark-content'} />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Messages</Text>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Messages</Text>
+        </View>
         <TouchableOpacity style={styles.newBtn} onPress={() => navigation.navigate('NewChat')}>
           <Ionicons name="create-outline" size={22} color={colors.primary} />
         </TouchableOpacity>
@@ -178,6 +183,12 @@ const getStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SIZES.medium,
     paddingVertical: SIZES.small,
+  },
+  headerLeft: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  backBtn: {
+    padding: 4,
   },
   headerTitle: { ...FONTS.h1, color: colors.text },
   newBtn: {

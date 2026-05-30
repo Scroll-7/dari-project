@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { getAuth } from 'firebase/auth';
 import {
-  getFirestore, collection, addDoc, serverTimestamp, doc, updateDoc
+  getFirestore, collection, addDoc, serverTimestamp, doc, updateDoc, getDoc
 } from 'firebase/firestore';
 import { useUser } from '../context/UserContext';
 import { FONTS, SIZES, SHADOWS } from '../constants/theme';
@@ -59,6 +59,13 @@ export default function PostRequestScreen({ route, navigation }) {
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       } else {
+        // Fetch current user's preferences to embed in the post for matching
+        let userPreferences = null;
+        try {
+          const userSnap = await getDoc(doc(db, 'users', uid));
+          if (userSnap.exists()) userPreferences = userSnap.data()?.preferences || null;
+        } catch (_) {}
+
         await addDoc(collection(db, 'roommatePosts'), {
           uid,
           name: user?.name || user?.username || 'Utilisateur',
@@ -67,8 +74,9 @@ export default function PostRequestScreen({ route, navigation }) {
           description: description.trim(),
           budget: budget.trim(),
           createdAt: serverTimestamp(),
-          interests: [],
-          habits: [],
+          interests: userPreferences?.interests || [],
+          habits: userPreferences?.lifestyle || [],
+          preferences: userPreferences,
         });
         Alert.alert('Publié !', 'Votre annonce est maintenant visible dans Colocataires.', [
           { text: 'OK', onPress: () => navigation.goBack() },
@@ -250,5 +258,3 @@ const getStyles = (colors) => StyleSheet.create({
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' },
   actionText: { ...FONTS.body2, color: colors.text, fontWeight: '500' },
 });
-
-

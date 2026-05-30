@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  SafeAreaView, Animated, KeyboardAvoidingView, Platform, Alert,
+  SafeAreaView, Animated, KeyboardAvoidingView, Platform, Alert, ScrollView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,9 +16,14 @@ export default function WelcomeUsernameScreen({ navigation }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const [username, setUsername] = useState('');
-  const [role, setRole] = useState('tenant'); // 'tenant' or 'landlord'
+  const [role, setRole] = useState('tenant'); // 'tenant', 'landlord', 'service'
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Extra fields for service providers
+  const [tarif, setTarif] = useState('');
+  const [phone, setPhone] = useState('');
+  const [workingTime, setWorkingTime] = useState('');
 
   // Subtle shake animation for error
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -61,10 +66,34 @@ export default function WelcomeUsernameScreen({ navigation }) {
       if (!uid) throw new Error('No authenticated user found.');
 
       // Persist username and role in Firestore under the user's document
-      await updateDoc(doc(db, 'users', uid), { 
+      const updateData = { 
         username: trimmed.toLowerCase(),
         role: role,
-      });
+      };
+
+      if (role === 'service') {
+        if (!tarif.trim() || !phone.trim() || !workingTime.trim()) {
+          setIsLoading(false);
+          setError('Veuillez remplir tous les champs du prestataire.');
+          shake();
+          return;
+        }
+
+        // Validate workingTime format (e.g., 8-19)
+        const timeRegex = /^([0-9]|1[0-9]|2[0-3])-([0-9]|1[0-9]|2[0-3])$/;
+        if (!timeRegex.test(workingTime.trim())) {
+          setIsLoading(false);
+          setError('Horaires invalides. Utilisez le format "8-19" (0 à 23).');
+          shake();
+          return;
+        }
+
+        updateData.tarif = tarif.trim();
+        updateData.phone = phone.trim();
+        updateData.workingTime = workingTime.trim();
+      }
+
+      await updateDoc(doc(db, 'users', uid), updateData);
 
       // Navigation is automatic: once Firestore writes `username`,
       // AuthContext's onSnapshot fires → hasUsername becomes true →
@@ -83,7 +112,7 @@ export default function WelcomeUsernameScreen({ navigation }) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <View style={styles.inner}>
+        <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
           {/* Top illustration / icon */}
           <LinearGradient
             colors={[colors.primary, colors.secondary || '#6C63FF']}
@@ -136,7 +165,7 @@ export default function WelcomeUsernameScreen({ navigation }) {
             >
               <Ionicons name="search" size={24} color={role === 'tenant' ? colors.primary : colors.textLight} />
               <Text style={[styles.roleText, role === 'tenant' && styles.roleTextActive]}>Chercheur</Text>
-              <Text style={styles.roleSubtext}>Je cherche un bien ou coloc</Text>
+              <Text style={styles.roleSubtext}>Je cherche un bien</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -148,7 +177,55 @@ export default function WelcomeUsernameScreen({ navigation }) {
               <Text style={[styles.roleText, role === 'landlord' && styles.roleTextActive]}>Propriétaire</Text>
               <Text style={styles.roleSubtext}>Je propose un bien</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.roleCard, role === 'service' && styles.roleCardActive]}
+              onPress={() => setRole('service')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="construct" size={24} color={role === 'service' ? colors.primary : colors.textLight} />
+              <Text style={[styles.roleText, role === 'service' && styles.roleTextActive]}>Prestataire</Text>
+              <Text style={styles.roleSubtext}>Je propose mes services</Text>
+            </TouchableOpacity>
           </View>
+
+          {role === 'service' && (
+            <View style={{ width: '100%', marginBottom: 16 }}>
+              <View style={[styles.inputWrap, { height: 48, marginBottom: 8 }]}>
+                <Ionicons name="pricetag-outline" size={18} color={colors.textLight} style={{ marginRight: 8 }} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Tarif (en DT)"
+                  placeholderTextColor={colors.textLight}
+                  keyboardType="numeric"
+                  value={tarif}
+                  onChangeText={(text) => setTarif(text.replace(/[^0-9]/g, ''))}
+                />
+              </View>
+              <View style={[styles.inputWrap, { height: 48, marginBottom: 8 }]}>
+                <Ionicons name="logo-whatsapp" size={18} color={colors.textLight} style={{ marginRight: 8 }} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Numéro WhatsApp"
+                  placeholderTextColor={colors.textLight}
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={(text) => setPhone(text.replace(/[^0-9]/g, ''))}
+                />
+              </View>
+              <View style={[styles.inputWrap, { height: 48 }]}>
+                <Ionicons name="time-outline" size={18} color={colors.textLight} style={{ marginRight: 8 }} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Horaires de travail (ex: 8-19)"
+                  placeholderTextColor={colors.textLight}
+                  keyboardType="numbers-and-punctuation"
+                  value={workingTime}
+                  onChangeText={(text) => setWorkingTime(text.replace(/[^0-9-]/g, ''))}
+                />
+              </View>
+            </View>
+          )}
 
           {!!error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -177,7 +254,7 @@ export default function WelcomeUsernameScreen({ navigation }) {
           <Text style={styles.hint}>
             You can always change this later in Settings.
           </Text>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -189,7 +266,7 @@ const getStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.background,
   },
   inner: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: SIZES.large,
@@ -254,7 +331,7 @@ const getStyles = (colors) => StyleSheet.create({
   },
   roleContainer: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     marginBottom: SIZES.medium,
     width: '100%',
   },
@@ -262,7 +339,7 @@ const getStyles = (colors) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.card || colors.white,
     borderRadius: 14,
-    padding: 16,
+    padding: 10,
     borderWidth: 2,
     borderColor: 'transparent',
     alignItems: 'center',
@@ -275,16 +352,16 @@ const getStyles = (colors) => StyleSheet.create({
   },
   roleText: {
     ...FONTS.h3,
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textLight,
     marginTop: 8,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   roleTextActive: {
     color: colors.primary,
   },
   roleSubtext: {
-    fontSize: 10,
+    fontSize: 9,
     color: colors.textLight,
     textAlign: 'center',
   },
@@ -314,5 +391,3 @@ const getStyles = (colors) => StyleSheet.create({
     textAlign: 'center',
   },
 });
-
-

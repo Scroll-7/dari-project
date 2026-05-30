@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/auth';
 import {
   Alert,
   Linking,
@@ -179,18 +181,6 @@ const PROVIDERS_DATA = {
 };
 
 // ──────────────────────────────────────────────
-// Icon map reused from ServicesScreen
-// ──────────────────────────────────────────────
-const SERVICE_ICONS = {
-  Plumbing: 'water-outline',
-  Electrician: 'flash-outline',
-  Cleaning: 'sparkles-outline',
-  Moving: 'cube-outline',
-  Painting: 'color-palette-outline',
-  Carpentry: 'hammer-outline',
-};
-
-// ──────────────────────────────────────────────
 // Star rating component
 // ──────────────────────────────────────────────
 function StarRating({ rating }) {
@@ -239,7 +229,7 @@ function ProviderCard({ provider, navigation }) {
         if (supported) Linking.openURL(phoneUrl);
         else Alert.alert('Erreur', 'Impossible de passer un appel sur cet appareil.');
       })
-      .catch(() => Alert.alert('Erreur', 'Impossible d\'ouvrir le numéro.'));
+      .catch(() => Alert.alert('Erreur', "Impossible d'ouvrir le numéro."));
   };
 
   const handleWhatsApp = () => {
@@ -248,13 +238,21 @@ function ProviderCard({ provider, navigation }) {
     Linking.canOpenURL(url)
       .then((supported) => {
         if (supported) Linking.openURL(url);
-        else Alert.alert('WhatsApp', 'WhatsApp n\'est pas installé sur cet appareil.');
+        else Alert.alert('WhatsApp', "WhatsApp n'est pas installé sur cet appareil.");
       })
-      .catch(() => Alert.alert('Erreur', 'Impossible d\'ouvrir WhatsApp.'));
+      .catch(() => Alert.alert('Erreur', "Impossible d'ouvrir WhatsApp."));
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, provider.isReal && styles.cardReal]}>
+      {/* Real badge */}
+      {provider.isReal && (
+        <View style={styles.realBadge}>
+          <Ionicons name="checkmark-circle" size={11} color="#fff" />
+          <Text style={styles.realBadgeText}>Inscrit sur Dari+</Text>
+        </View>
+      )}
+
       {/* Top row: avatar + info */}
       <View style={styles.cardTop}>
         {/* Avatar */}
@@ -326,11 +324,59 @@ export default function ServiceProvidersScreen({ route, navigation }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const { service } = route.params; // e.g. { title: 'Plumbing', icon: 'water-outline' }
-  const [sortBy, setSortBy] = useState('rating'); // 'rating' | 'price'
+  const [sortBy, setSortBy]               = useState('rating'); // 'rating' | 'price'
+  const [realProviders, setRealProviders] = useState([]);
 
-  const providers = PROVIDERS_DATA[service.title] ?? [];
+  // ── Fetch real registered providers from Firestore ───────────────────────
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const q = query(
+          collection(db, 'users'),
+          where('role', '==', 'service'),
+          where('serviceCategory', '==', service.title),
+        );
+        const snap = await getDocs(q);
+        const providers = snap.docs.map((d) => {
+          const data = d.data();
+          const fullName = data.fullName || data.name || data.username || 'Prestataire';
+          const initials = fullName
+            .split(' ')
+            .map((w) => w[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase();
+          const AVATAR_COLORS = ['#4461F2', '#E83E8C', '#20C997', '#FD7E14', '#6F42C1', '#FFC107'];
+          const avatarColor = AVATAR_COLORS[d.id.charCodeAt(0) % AVATAR_COLORS.length];
+          return {
+            id: `real_${d.id}`,
+            name: fullName,
+            initials,
+            avatarColor,
+            rating: data.rating || 5.0,
+            reviews: data.reviews || 0,
+            price: data.tarif ? `${data.tarif} DT` : 'Sur devis',
+            phone: data.phone || '',
+            experience: data.experience || 'Nouveau',
+            available: data.available !== false,
+            specialty: data.specialty || data.serviceCategory || '',
+            isReal: true,
+          };
+        });
+        if (active) setRealProviders(providers);
+      } catch (e) {
+        console.warn('Could not fetch real providers', e);
+      }
+    })();
+    return () => { active = false; };
+  }, [service.title]);
 
-  const sorted = [...providers].sort((a, b) => {
+  const mockProviders = PROVIDERS_DATA[service.title] ?? [];
+  // Real registered providers appear first
+  const allProviders = [...realProviders, ...mockProviders];
+
+  const sorted = [...allProviders].sort((a, b) => {
     if (sortBy === 'rating') return b.rating - a.rating;
     // Sort by minimum price (extract first number)
     const getMin = (p) => parseInt(p.price.replace(/\s/g, '').split('–')[0], 10) || 0;
@@ -353,7 +399,11 @@ export default function ServiceProvidersScreen({ route, navigation }) {
           </View>
           <View>
             <Text style={styles.headerTitle}>{service.title}</Text>
-            <Text style={styles.headerSub}>{providers.length} prestataires</Text>
+            <Text style={styles.headerSub}>
+              {realProviders.length > 0
+                ? `${realProviders.length} inscrit(s) · ${mockProviders.length} exemples`
+                : `${mockProviders.length} prestataires`}
+            </Text>
           </View>
         </View>
       </View>
@@ -376,10 +426,16 @@ export default function ServiceProvidersScreen({ route, navigation }) {
       </View>
 
       {/* ── Provider list ── */}
-      <ScrollView
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+        {/* Banner when real providers exist */}
+        {realProviders.length > 0 && (
+          <View style={[styles.realBanner, { backgroundColor: colors.primaryOpacity }]}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+            <Text style={[styles.realBannerText, { color: colors.primary }]}>
+              {realProviders.length} prestataire{realProviders.length > 1 ? 's' : ''} inscrit{realProviders.length > 1 ? 's' : ''} sur Dari+
+            </Text>
+          </View>
+        )}
         {sorted.map((provider) => (
           <ProviderCard key={provider.id} provider={provider} navigation={navigation} />
         ))}
@@ -446,6 +502,21 @@ const getStyles = (colors) => StyleSheet.create({
     padding: SIZES.medium,
     ...SHADOWS.light,
   },
+  cardReal: {
+    borderWidth: 1.5,
+    borderColor: colors.primary + '55',
+  },
+
+  // Real provider badge inside card
+  realBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 20, marginBottom: 8,
+  },
+  realBadgeText: { fontSize: 9, fontWeight: '700', color: '#fff' },
+
   cardTop: { flexDirection: 'row', alignItems: 'flex-start' },
 
   // Avatar
@@ -504,6 +575,12 @@ const getStyles = (colors) => StyleSheet.create({
     ...SHADOWS.light,
   },
   btnCallText: { color: colors.white, fontSize: 13, fontWeight: '700' },
+
+  // Real providers top banner
+  realBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: SIZES.radius.md,
+    padding: 10, marginBottom: SIZES.medium,
+  },
+  realBannerText: { fontSize: 13, fontWeight: '700' },
 });
-
-

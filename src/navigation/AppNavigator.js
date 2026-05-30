@@ -35,11 +35,14 @@ import SearchScreen            from '../screens/SearchScreen';
 import ServiceProvidersScreen  from '../screens/ServiceProvidersScreen';
 import ServicesScreen          from '../screens/ServicesScreen';
 import SettingsScreen          from '../screens/SettingsScreen';
-import WelcomeUsernameScreen   from '../screens/WelcomeUsernameScreen';
-import PostPropertyScreen      from '../screens/PostPropertyScreen';
-import PostRequestScreen       from '../screens/PostRequestScreen';
-import NewChatScreen           from '../screens/NewChatScreen';
-import SplashScreen            from '../screens/SplashScreen';
+import WelcomeUsernameScreen         from '../screens/WelcomeUsernameScreen';
+import PreferencesOnboardingScreen   from '../screens/PreferencesOnboardingScreen';
+import EditPreferencesScreen         from '../screens/EditPreferencesScreen';
+import PostPropertyScreen            from '../screens/PostPropertyScreen';
+import PostRequestScreen             from '../screens/PostRequestScreen';
+import NewChatScreen                 from '../screens/NewChatScreen';
+import SplashScreen                  from '../screens/SplashScreen';
+import ServiceCategoryScreen         from '../screens/ServiceCategoryScreen';
 import { useUser }             from '../context/UserContext';
 
 
@@ -146,7 +149,7 @@ function MainTabs() {
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Home"      component={HomeScreen} />
-      {user?.role !== 'landlord' && (
+      {user?.role !== 'landlord' && user?.role !== 'service' && (
         <Tab.Screen name="Roommates" component={RoommatesScreen} />
       )}
       <Tab.Screen name="ADD"       component={PlaceholderScreen} />
@@ -157,10 +160,20 @@ function MainTabs() {
 }
 
 // ─── App Navigator Content (Consumes AuthContext) ──────────────────────────────
+function PreferencesOnboardingWrapper() {
+  // Navigation is automatic once hasPreferences flips to true in Firestore
+  return <PreferencesOnboardingScreen isEditing={false} onDone={() => {}} />;
+}
+
 function AppNavigatorContent() {
-  const { user, isLoading, hasUsername } = React.useContext(AuthContext);
+  const { user, isLoading, hasUsername, hasPreferences, role } = React.useContext(AuthContext);
   const { colors } = useTheme();
   const [showSplash, setShowSplash] = useState(true);
+
+  // Service providers skip the preferences onboarding (budget / interests / lifestyle
+  // are renter/roommate concepts — not relevant for a service provider).
+  const isServiceProvider = role === 'service';
+  const needsPreferences = !hasPreferences && !isServiceProvider;
 
   // Show splash on first launch (before auth check completes or after)
   if (showSplash) {
@@ -182,9 +195,20 @@ function AppNavigatorContent() {
             <Stack.Screen name="Signup" component={SignupScreen} />
           </>
         ) : !hasUsername ? (
-          // Authenticated but username not yet chosen → onboarding
+          // Authenticated but username not yet chosen → onboarding step 1
           <>
             <Stack.Screen name="WelcomeUsername" component={WelcomeUsernameScreen} />
+          </>
+        ) : needsPreferences ? (
+          // Username set but preferences not yet filled → onboarding step 2
+          // (skipped entirely for service providers)
+          <>
+            {isServiceProvider ? (
+              // Service providers pick their trade category instead
+              <Stack.Screen name="ServiceCategory" component={ServiceCategoryScreen} />
+            ) : (
+              <Stack.Screen name="PreferencesOnboarding" component={PreferencesOnboardingWrapper} />
+            )}
           </>
         ) : (
           // Fully set-up authenticated screens
@@ -208,6 +232,7 @@ function AppNavigatorContent() {
             <Stack.Screen name="NewChat"          component={NewChatScreen} />
             <Stack.Screen name="PostProperty"     component={PostPropertyScreen} />
             <Stack.Screen name="PostRequest"      component={PostRequestScreen} />
+            <Stack.Screen name="EditPreferences"  component={EditPreferencesScreen} />
           </>
         )}
       </Stack.Navigator>

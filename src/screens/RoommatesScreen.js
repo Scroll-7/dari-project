@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { getOrCreateConversation } from '../firebase/chat';
 import { FilterPill } from '../components/FilterPill';
 import { StarRating } from '../components/StarRating';
@@ -130,6 +130,37 @@ function pickAvatarColor(name = '') {
   return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
 }
 
+// ─── Matching algorithm ───────────────────────────────────────────────────────
+
+/** Jaccard similarity as a 0–1 percentage */
+function jaccardPct(a = [], b = []) {
+  if (!a.length && !b.length) return 1;
+  const setA = new Set(a);
+  const union = new Set([...a, ...b]);
+  let inter = 0;
+  b.forEach((x) => { if (setA.has(x)) inter++; });
+  return union.size === 0 ? 0 : inter / union.size;
+}
+
+/** Budget overlap score: 1 if same range, 0.5 if adjacent, 0 otherwise */
+const BUDGET_RANKS = { '0-300': 0, '300-500': 1, '500-800': 2, '800-1200': 3, '1200+': 4 };
+function budgetOverlapPct(a, b) {
+  if (!a || !b) return 0;
+  const diff = Math.abs((BUDGET_RANKS[a] ?? 2) - (BUDGET_RANKS[b] ?? 2));
+  if (diff === 0) return 1;
+  if (diff === 1) return 0.6;
+  return 0;
+}
+
+/** Main match scorer: 0–100 */
+function computeMatch(myPrefs, otherPrefs) {
+  if (!myPrefs || !otherPrefs) return null;
+  const interests = jaccardPct(myPrefs.interests, otherPrefs.interests) * 50;
+  const budget    = budgetOverlapPct(myPrefs.budgetRange, otherPrefs.budgetRange) * 30;
+  const lifestyle = jaccardPct(myPrefs.lifestyle, otherPrefs.lifestyle) * 20;
+  return Math.round(interests + budget + lifestyle);
+}
+
 // ─── CompatRing ───────────────────────────────────────────────────────────────
 
 function CompatRing({ score }) {
@@ -179,11 +210,7 @@ function RoommateCard({ item, onPress, onChat }) {
             <Ionicons name="star" size={9} color={colors.white} />
           </View>
         )}
-        {item.isReal && (
-          <View style={styles.realBadge}>
-            <Text style={styles.realBadgeText}>Réel</Text>
-          </View>
-        )}
+
       </View>
 
       {/* Center: info */}
@@ -239,6 +266,17 @@ export default function RoommatesScreen() {
   const [filter, setFilter] = useState('all');
   const [realPosts, setRealPosts] = useState([]);
   const [loadingReal, setLoadingReal] = useState(true);
+  const [myPrefs, setMyPrefs] = useState(null);
+
+  // Fetch current user's preferences once
+  useEffect(() => {
+    if (!myUid) return;
+    import('firebase/firestore').then(({ doc, getDoc }) => {
+      getDoc(doc(db, 'users', myUid)).then((snap) => {
+        if (snap.exists()) setMyPrefs(snap.data()?.preferences || null);
+      }).catch(() => {});
+    });
+  }, [myUid]);
 
   useEffect(() => {
     const q = query(collection(db, 'roommatePosts'), orderBy('createdAt', 'desc'));
@@ -252,25 +290,29 @@ export default function RoommatesScreen() {
     return unsub;
   }, [myUid]);
 
-  const realAsCards = realPosts.map((p) => ({
-    id: `real_${p.firestoreId}`,
-    uid: p.uid,
-    name: p.name || 'Utilisateur',
-    username: p.username || '',
-    role: p.description?.slice(0, 50) || 'Cherche colocation',
-    age: null,
-    city: p.city || '',
-    compatibility: null,
-    recommended: false,
-    rating: null,
-    image: null,
-    bio: p.description || '',
-    budget: p.budget || '',
-    interests: p.interests || [],
-    habits: p.habits || [],
-    experiences: [],
-    isReal: true,
-  }));
+  const realAsCards = realPosts.map((p) => {
+    const otherPrefs = p.preferences || null;
+    const score      = computeMatch(myPrefs, otherPrefs);
+    return {
+      id: `real_${p.firestoreId}`,
+      uid: p.uid,
+      name: p.name || 'Utilisateur',
+      username: p.username || '',
+      role: p.description?.slice(0, 50) || 'Cherche colocation',
+      age: null,
+      city: p.city || '',
+      compatibility: score,
+      recommended: score !== null && score >= 85,
+      rating: null,
+      image: null,
+      bio: p.description || '',
+      budget: p.budget || '',
+      interests: p.interests || [],
+      habits: p.habits || [],
+      experiences: [],
+      isReal: true,
+    };
+  });
 
   const combined = [...realAsCards, ...ROOMMATES.map((r) => ({ ...r, isReal: false }))];
 
@@ -301,9 +343,14 @@ export default function RoommatesScreen() {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Colocataires</Text>
-          <Text style={styles.subtitle}>{data.length} suggestions pour vous</Text>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.title}>Colocataires</Text>
+            <Text style={styles.subtitle}>{data.length} suggestions pour vous</Text>
+          </View>
         </View>
         <TouchableOpacity style={styles.filterIconBtn} activeOpacity={0.8}>
           <Ionicons name="options-outline" size={20} color={colors.text} />
@@ -354,17 +401,24 @@ export default function RoommatesScreen() {
 const getStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
+  // Header
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-    paddingHorizontal: SIZES.medium,
-    paddingTop: SIZES.large, paddingBottom: SIZES.small,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: SIZES.medium, paddingTop: 10, paddingBottom: SIZES.medium,
   },
-  title:    { ...FONTS.h1, color: colors.text },
-  subtitle: { ...FONTS.body2, color: colors.textLight, marginTop: 4 },
+  headerLeft: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  backBtn: {
+    padding: 4,
+  },
+  title: { ...FONTS.h1, color: colors.text },
+  subtitle: { ...FONTS.body2, color: colors.textLight, marginTop: 2 },
   filterIconBtn: {
-    width: 42, height: 42, borderRadius: SIZES.radius.md,
-    backgroundColor: colors.card, justifyContent: 'center', alignItems: 'center',
-    ...SHADOWS.light,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: colors.card,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: colors.line,
   },
 
   tipBanner: {

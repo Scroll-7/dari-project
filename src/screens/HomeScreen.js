@@ -41,29 +41,7 @@ const AGENTS = [
   { id: '3', name: 'Ines B.', rating: 4.7, deals: 29, image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200' },
 ];
 
-const STATS = [
-  { label: 'Listings', value: '1.2k+', icon: 'home' },
-  { label: 'This Week', value: '48',   icon: 'trending-up' },
-  { label: 'Avg Price', value: '1.8k', icon: 'cash' },
-];
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
-
-function StatsBar() {
-  const { colors } = useTheme();
-  const styles = getStyles(colors);
-  return (
-    <LinearGradient colors={GRADIENTS.primary} style={styles.statsBar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-      {STATS.map((s, i) => (
-        <View key={s.label} style={[styles.statItem, i < STATS.length - 1 && styles.statDivider]}>
-          <Ionicons name={s.icon} size={18} color="rgba(255,255,255,0.8)" />
-          <Text style={styles.statValue}>{s.value}</Text>
-          <Text style={styles.statLabel}>{s.label}</Text>
-        </View>
-      ))}
-    </LinearGradient>
-  );
-}
 
 function AgentCard({ agent }) {
   const { colors } = useTheme();
@@ -172,8 +150,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </TouchableOpacity>
 
-        {/* ── Stats bar ── */}
-        <StatsBar />
+
 
         {/* ── Categories ── */}
         <SectionHeader
@@ -342,29 +319,13 @@ const getStyles = (colors) => StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
 
-  // Stats bar
-  statsBar: {
-    flexDirection: 'row',
-    borderRadius: SIZES.radius.lg,
-    marginBottom: SIZES.large,
-    paddingVertical: SIZES.medium,
-    ...SHADOWS.glow,
-  },
-  statItem: {
-    flex: 1, alignItems: 'center', gap: 4,
-  },
-  statDivider: {
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(255,255,255,0.2)',
-  },
-  statValue: { fontSize: 18, fontWeight: '700', color: colors.white },
-  statLabel: { fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: '500', textTransform: 'uppercase' },
+
 
   // Section header
   sectionHeader: { marginTop: SIZES.small },
 
   // Categories
-  categoriesRow: { paddingBottom: SIZES.large, gap: 12 },
+  categoriesRow: { paddingBottom: SIZES.large, gap: 12, flexGrow: 1, justifyContent: 'center' },
   categoryCard: { alignItems: 'center', gap: 8, marginRight: 4 },
   categoryIcon: {
     width: 64, height: 64,

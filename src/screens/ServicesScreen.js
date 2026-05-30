@@ -110,8 +110,13 @@ export default function ServicesScreen() {
 
         {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.title}>Services</Text>
-          <Text style={styles.subtitle}>Trouvez des professionnels de confiance</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.title}>Services</Text>
+            <Text style={styles.subtitle}>Trouvez des professionnels de confiance</Text>
+          </View>
         </View>
 
         {/* ── Emergency Banner ── */}
@@ -163,8 +168,12 @@ const getStyles = (colors) => StyleSheet.create({
   scroll: { paddingBottom: 110 },
 
   header: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: SIZES.medium,
     paddingTop: SIZES.large, paddingBottom: SIZES.medium,
+  },
+  backBtn: {
+    padding: 4,
   },
   title:    { ...FONTS.h1, color: colors.text },
   subtitle: { ...FONTS.body2, color: colors.textLight, marginTop: 4 },
