@@ -244,15 +244,7 @@ function ProviderCard({ provider, navigation }) {
   };
 
   return (
-    <View style={[styles.card, provider.isReal && styles.cardReal]}>
-      {/* Real badge */}
-      {provider.isReal && (
-        <View style={styles.realBadge}>
-          <Ionicons name="checkmark-circle" size={11} color="#fff" />
-          <Text style={styles.realBadgeText}>Inscrit sur Dari+</Text>
-        </View>
-      )}
-
+    <View style={styles.card}>
       {/* Top row: avatar + info */}
       <View style={styles.cardTop}>
         {/* Avatar */}
@@ -290,7 +282,7 @@ function ProviderCard({ provider, navigation }) {
 
       {/* Bottom row: price + contact buttons */}
       <View style={styles.cardBottom}>
-        <View>
+        <View style={{ flex: 1, marginRight: 8 }}>
           <Text style={styles.priceLabel}>Tarif</Text>
           <Text style={styles.price}>{provider.price}</Text>
         </View>
@@ -400,9 +392,7 @@ export default function ServiceProvidersScreen({ route, navigation }) {
           <View>
             <Text style={styles.headerTitle}>{service.title}</Text>
             <Text style={styles.headerSub}>
-              {realProviders.length > 0
-                ? `${realProviders.length} inscrit(s) · ${mockProviders.length} exemples`
-                : `${mockProviders.length} prestataires`}
+              {allProviders.length} prestataires
             </Text>
           </View>
         </View>
@@ -428,14 +418,6 @@ export default function ServiceProvidersScreen({ route, navigation }) {
       {/* ── Provider list ── */}
       <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         {/* Banner when real providers exist */}
-        {realProviders.length > 0 && (
-          <View style={[styles.realBanner, { backgroundColor: colors.primaryOpacity }]}>
-            <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-            <Text style={[styles.realBannerText, { color: colors.primary }]}>
-              {realProviders.length} prestataire{realProviders.length > 1 ? 's' : ''} inscrit{realProviders.length > 1 ? 's' : ''} sur Dari+
-            </Text>
-          </View>
-        )}
         {sorted.map((provider) => (
           <ProviderCard key={provider.id} provider={provider} navigation={navigation} />
         ))}

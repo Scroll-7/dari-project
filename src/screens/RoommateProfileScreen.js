@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Image,
   SafeAreaView,
@@ -8,11 +8,17 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 
 import { useConversations } from '../context/ConversationContext';
+import { useUser } from '../context/UserContext';
 import { FONTS, SHADOWS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 
@@ -57,6 +63,98 @@ export default function RoommateProfileScreen({ route }) {
   const navigation = useNavigation();
   const { openOrCreateConversation } = useConversations();
   const { roommate } = route.params;
+  const { user } = useUser();
+
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const auth = getAuth();
+  const db = getFirestore();
+  const currentUser = auth.currentUser;
+
+  useEffect(() => {
+    // We only fetch live comments if this is a real user (has uid)
+    if (!roommate.uid) return;
+    
+    const q = query(
+      collection(db, 'users', roommate.uid, 'comments'),
+      orderBy('createdAt', 'desc')
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setComments(fetched);
+    });
+    return unsub;
+  }, [roommate.uid]);
+
+  const handleSubmitComment = async () => {
+    if (!newComment.trim()) return;
+    if (!currentUser) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour commenter.');
+      return;
+    }
+    if (!roommate.uid) {
+      Alert.alert('Erreur', "Vous ne pouvez commenter que sur les vrais profils.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      if (editingCommentId) {
+        // Edit mode
+        await updateDoc(doc(db, 'users', roommate.uid, 'comments', editingCommentId), {
+          text: newComment.trim(),
+        });
+        setEditingCommentId(null);
+      } else {
+        // Create mode
+        await addDoc(collection(db, 'users', roommate.uid, 'comments'), {
+          text: newComment.trim(),
+          authorId: currentUser.uid,
+          authorName: user?.name || user?.username || currentUser.displayName || 'Utilisateur',
+          createdAt: serverTimestamp(),
+        });
+        
+        // Notification
+        if (currentUser.uid !== roommate.uid) {
+          await addDoc(collection(db, 'users', roommate.uid, 'notifications'), {
+            type: 'comment',
+            fromName: user?.name || user?.username || currentUser.displayName || 'Utilisateur',
+            createdAt: serverTimestamp(),
+            read: false,
+            message: newComment.trim(),
+          });
+        }
+      }
+      setNewComment('');
+    } catch (error) {
+      console.error('Error submitting comment: ', error);
+      Alert.alert('Erreur', 'Impossible de sauvegarder le commentaire.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEditClick = (comment) => {
+    setEditingCommentId(comment.id);
+    setNewComment(comment.text);
+  };
+
+  const handleDeleteComment = (commentId) => {
+    Alert.alert('Supprimer', 'Voulez-vous vraiment supprimer ce commentaire ?', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Supprimer', style: 'destructive', onPress: async () => {
+          try {
+            await deleteDoc(doc(db, 'users', roommate.uid, 'comments', commentId));
+          } catch (error) {
+            console.error('Error deleting comment: ', error);
+            Alert.alert('Erreur', 'Impossible de supprimer ce commentaire.');
+          }
+      } }
+    ]);
+  };
 
   const scoreColor =
     roommate.compatibility >= 90 ? colors.success :
@@ -162,36 +260,97 @@ export default function RoommateProfileScreen({ route }) {
           </View>
         </View>
 
-        {/* ── Past experiences ── */}
+        {/* ── Avis et Commentaires ── */}
         <View style={styles.section}>
-          <SectionTitle label="Expériences passées" />
-          {roommate.experiences.length === 0 ? (
-            <Text style={styles.noExp}>Aucune expérience enregistrée</Text>
-          ) : (
-            roommate.experiences.map((exp, idx) => (
-              <View key={exp.id} style={styles.expCard}>
-                {/* Timeline dot */}
-                <View style={styles.timelineCol}>
-                  <View style={[styles.timelineDot, { backgroundColor: colors.primary }]} />
-                  {idx < roommate.experiences.length - 1 && (
-                    <View style={styles.timelineLine} />
-                  )}
-                </View>
-
-                <View style={styles.expContent}>
-                  <View style={styles.expHeader}>
-                    <Text style={styles.expPlace} numberOfLines={1}>{exp.place}</Text>
-                    <Text style={styles.expYear}>{exp.year}</Text>
-                  </View>
-
-                  <Text style={styles.expDuration}>{exp.duration}</Text>
-
-                  <Stars count={exp.rating} />
-
-                  <Text style={styles.expNote}>{exp.note}</Text>
-                </View>
+          <SectionTitle label="Avis d'anciens colocataires" />
+          
+          {/* Mock experiences (if any) */}
+          {roommate.experiences?.map((exp, idx) => (
+            <View key={exp.id} style={styles.expCard}>
+              <View style={styles.timelineCol}>
+                <View style={[styles.timelineDot, { backgroundColor: colors.primary }]} />
+                <View style={styles.timelineLine} />
               </View>
-            ))
+              <View style={styles.expContent}>
+                <View style={styles.expHeader}>
+                  <Text style={styles.expPlace} numberOfLines={1}>{exp.place}</Text>
+                  <Text style={styles.expYear}>{exp.year}</Text>
+                </View>
+                <Text style={styles.expDuration}>{exp.duration}</Text>
+                <Stars count={exp.rating} />
+                {exp.note ? <Text style={styles.expNote}>{exp.note}</Text> : null}
+              </View>
+            </View>
+          ))}
+
+          {/* Real comments */}
+          {comments.map((comment, idx) => (
+            <View key={comment.id} style={styles.expCard}>
+              <View style={styles.timelineCol}>
+                <View style={[styles.timelineDot, { backgroundColor: colors.primary }]} />
+                {idx < comments.length - 1 && <View style={styles.timelineLine} />}
+              </View>
+              <View style={styles.expContent}>
+                <View style={styles.expHeader}>
+                  <Text style={styles.expPlace} numberOfLines={1}>{comment.authorName}</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    {currentUser && currentUser.uid === comment.authorId && (
+                      <TouchableOpacity onPress={() => handleEditClick(comment)}>
+                        <Ionicons name="pencil" size={16} color={colors.primary} />
+                      </TouchableOpacity>
+                    )}
+                    {currentUser && (currentUser.uid === comment.authorId || currentUser.uid === roommate.uid) && (
+                      <TouchableOpacity onPress={() => handleDeleteComment(comment.id)}>
+                        <Ionicons name="trash" size={16} color="#EF4444" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+                <Text style={styles.expNote}>{comment.text}</Text>
+              </View>
+            </View>
+          ))}
+
+          {(!roommate.experiences?.length && comments.length === 0) && (
+            <Text style={styles.noExp}>Aucun avis pour le moment.</Text>
+          )}
+
+          {/* Add/Edit Comment Input */}
+          {roommate.uid && (
+            <View style={styles.commentInputWrap}>
+              <TextInput
+                style={[styles.commentInput, { color: colors.text, borderColor: colors.line }]}
+                placeholder="Laissez un commentaire..."
+                placeholderTextColor={colors.textLight}
+                value={newComment}
+                onChangeText={setNewComment}
+                multiline
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
+                {editingCommentId && (
+                  <TouchableOpacity
+                    style={[styles.commentBtn, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line }]}
+                    onPress={() => {
+                      setEditingCommentId(null);
+                      setNewComment('');
+                    }}
+                  >
+                    <Text style={[styles.commentBtnText, { color: colors.text }]}>Annuler</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.commentBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleSubmitComment}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : (
+                    <Text style={styles.commentBtnText}>{editingCommentId ? 'Modifier' : 'Envoyer'}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
         </View>
 
@@ -368,5 +527,31 @@ const getStyles = (colors) => StyleSheet.create({
     ...FONTS.body1,
     fontWeight: '700',
     color: colors.white,
+  },
+  
+  // Comment Input
+  commentInputWrap: {
+    marginTop: SIZES.medium,
+    gap: SIZES.small,
+  },
+  commentInput: {
+    borderWidth: 1,
+    borderRadius: SIZES.radius.md,
+    padding: 12,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    ...FONTS.body2,
+  },
+  commentBtn: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: SIZES.radius.pill,
+    ...SHADOWS.xs,
+  },
+  commentBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    ...FONTS.body2,
   },
 });
