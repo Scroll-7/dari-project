@@ -14,6 +14,7 @@ const EMPTY_USER = {
   city: '',
   photo: null,
   username: '',
+  age: '',
   role: 'tenant', // default to tenant
 };
 
@@ -59,7 +60,13 @@ export function UserProvider({ children }) {
               city: data.city || '',
               photo: data.avatarUrl || data.photo || null,
               username: data.username || '',
+              age: data.age?.toString() || '',
               role: data.role || 'tenant',
+              budget: data.preferences?.budgetRange || null,
+              interests: data.preferences?.interests || [],
+              lifestyle: data.preferences?.lifestyle || [],
+              habits: data.preferences?.lifestyle || [], // Alias for habits
+              description: data.description || '', // Added bio/description sync
             };
             setUser(merged);
             AsyncStorage.setItem(storageKey, JSON.stringify(merged));
@@ -99,6 +106,7 @@ export function UserProvider({ children }) {
         city: updated.city,
         avatarUrl: updated.photo,
         username: updated.username,
+        age: updated.age,
       });
     } catch (e) {
       console.warn('UserContext updateUser error:', e);
