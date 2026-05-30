@@ -2,10 +2,11 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  SafeAreaView, Animated, KeyboardAvoidingView, Platform, Alert, ScrollView
+  SafeAreaView, Animated, KeyboardAvoidingView, Platform, Alert, ScrollView, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '../firebase/auth';
@@ -16,9 +17,20 @@ export default function WelcomeUsernameScreen({ navigation }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const [username, setUsername] = useState('');
+  const [birthDate, setBirthDate] = useState(new Date(2000, 0, 1));
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState(new Date(2000, 0, 1));
   const [role, setRole] = useState('tenant'); // 'tenant', 'landlord', 'service'
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const computeAge = (date) => {
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const m = today.getMonth() - date.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < date.getDate())) age--;
+    return age;
+  };
 
   // Extra fields for service providers
   const [tarif, setTarif] = useState('');
@@ -55,6 +67,13 @@ export default function WelcomeUsernameScreen({ navigation }) {
       shake();
       return;
     }
+    
+    const ageNum = computeAge(birthDate);
+    if (ageNum < 18 || ageNum > 100) {
+      setError('You must be at least 18 years old.');
+      shake();
+      return;
+    }
 
     setIsLoading(true);
     setError('');
@@ -65,9 +84,11 @@ export default function WelcomeUsernameScreen({ navigation }) {
 
       if (!uid) throw new Error('No authenticated user found.');
 
-      // Persist username and role in Firestore under the user's document
+      // Persist username, age, and role in Firestore under the user's document
       const updateData = { 
         username: trimmed.toLowerCase(),
+        age: ageNum,
+        birthDate: birthDate.toISOString(),
         role: role,
       };
 
@@ -129,7 +150,7 @@ export default function WelcomeUsernameScreen({ navigation }) {
             Choose a username so others can find and recognise you.
           </Text>
 
-          {/* Input */}
+          {/* Inputs */}
           <Animated.View
             style={[styles.inputWrap, { transform: [{ translateX: shakeAnim }] }]}
           >
@@ -150,10 +171,91 @@ export default function WelcomeUsernameScreen({ navigation }) {
                 setUsername(t);
                 if (error) setError('');
               }}
-              returnKeyType="done"
-              onSubmitEditing={handleContinue}
+              returnKeyType="next"
             />
           </Animated.View>
+
+          {/* Date of Birth Picker */}
+          <TouchableOpacity
+            style={styles.inputWrap}
+            onPress={() => {
+              setTempDate(birthDate);
+              setShowDatePicker(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={20}
+              color={colors.textLight}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={[styles.input, { color: birthDate ? colors.text : colors.textLight, paddingVertical: 0, lineHeight: 54 }]}>
+              {birthDate
+                ? `${birthDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })} (${computeAge(birthDate)} ans)`
+                : 'Date de naissance'}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={colors.textLight} />
+          </TouchableOpacity>
+
+          {/* Date Picker — Android: native dialog, iOS: bottom-sheet modal */}
+          {Platform.OS === 'android' && showDatePicker && (
+            <DateTimePicker
+              value={tempDate}
+              mode="date"
+              display="default"
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(false);
+                if (event.type === 'set' && selectedDate) {
+                  setBirthDate(selectedDate);
+                  if (error) setError('');
+                }
+              }}
+              maximumDate={new Date()}
+              minimumDate={new Date(1924, 0, 1)}
+            />
+          )}
+
+          {Platform.OS === 'ios' && (
+            <Modal
+              visible={showDatePicker}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowDatePicker(false)}
+            >
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => setShowDatePicker(false)}
+              />
+              <View style={styles.pickerModal}>
+                <View style={styles.pickerHeader}>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                    <Text style={[styles.pickerAction, { color: colors.textLight }]}>Annuler</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.pickerTitle}>Date de naissance</Text>
+                  <TouchableOpacity onPress={() => {
+                    setBirthDate(tempDate);
+                    if (error) setError('');
+                    setShowDatePicker(false);
+                  }}>
+                    <Text style={[styles.pickerAction, { color: colors.primary }]}>Confirmer</Text>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={tempDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={(event, selectedDate) => {
+                    if (selectedDate) setTempDate(selectedDate);
+                  }}
+                  maximumDate={new Date()}
+                  minimumDate={new Date(1924, 0, 1)}
+                  style={{ width: '100%' }}
+                />
+              </View>
+            </Modal>
+          )}
 
           {/* Role Selection */}
           <Text style={styles.sectionLabel}>Je suis :</Text>
@@ -389,5 +491,34 @@ const getStyles = (colors) => StyleSheet.create({
     fontSize: 12,
     color: colors.textLight,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  pickerModal: {
+    backgroundColor: colors.card || colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 36,
+    paddingHorizontal: 16,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border || '#e8e8e8',
+    marginBottom: 4,
+  },
+  pickerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  pickerAction: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

@@ -299,7 +299,7 @@ export default function RoommatesScreen() {
       name: p.name || 'Utilisateur',
       username: p.username || '',
       role: p.description?.slice(0, 50) || 'Cherche colocation',
-      age: null,
+      age: p.age || null,
       city: p.city || '',
       compatibility: score,
       recommended: score !== null && score >= 85,

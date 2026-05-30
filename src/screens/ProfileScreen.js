@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Alert,
   Image,
@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { getAuth } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, getCountFromServer } from 'firebase/firestore';
 import { db } from '../firebase/auth';
 import { useTheme } from '../context/ThemeContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -51,6 +51,15 @@ export default function ProfileScreen({ navigation }) {
   const [showEdit, setShowEdit] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? '');
   const [editCity, setEditCity] = useState(user?.city ?? '');
+  const [reviewCount, setReviewCount] = useState(0);
+
+  useEffect(() => {
+    const uid = getAuth().currentUser?.uid;
+    if (!uid) return;
+    getCountFromServer(collection(db, 'users', uid, 'comments'))
+      .then((snap) => setReviewCount(snap.data().count))
+      .catch(() => {});
+  }, []);
 
   const styles = React.useMemo(() => getStyles(colors), [colors]);
   const menuList = React.useMemo(() => getMenu(colors), [colors]);
@@ -156,14 +165,21 @@ export default function ProfileScreen({ navigation }) {
         {/* ── Stats ── */}
         <View style={styles.statsRow}>
           {[
-            { label: 'Saved',   value: savedCount },
+            { label: 'Saved',    value: savedCount },
             { label: 'Listings', value: listingsCount },
-            { label: 'Reviews',  value: 8 },
+            { label: 'Reviews',  value: reviewCount, screen: 'ProfileReviews' },
           ].map((s) => (
-            <View key={s.label} style={styles.statItem}>
+            <TouchableOpacity
+              key={s.label}
+              style={styles.statItem}
+              onPress={() => s.screen && navigation.navigate(s.screen)}
+              activeOpacity={s.screen ? 0.7 : 1}
+            >
               <Text style={styles.statValue}>{s.value}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
+              <Text style={[styles.statLabel, s.screen && { color: colors.primary }]}>
+                {s.label}{s.screen ? ' ›' : ''}
+              </Text>
+            </TouchableOpacity>
           ))}
         </View>
 

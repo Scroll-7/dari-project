@@ -44,6 +44,7 @@ import NewChatScreen                 from '../screens/NewChatScreen';
 import SplashScreen                  from '../screens/SplashScreen';
 import ServiceCategoryScreen         from '../screens/ServiceCategoryScreen';
 import NotificationsScreen           from '../screens/NotificationsScreen';
+import ProfileReviewsScreen          from '../screens/ProfileReviewsScreen';
 import { useUser }             from '../context/UserContext';
 
 
@@ -235,6 +236,8 @@ function AppNavigatorContent() {
             <Stack.Screen name="PostRequest"      component={PostRequestScreen} />
             <Stack.Screen name="EditPreferences"  component={EditPreferencesScreen} />
             <Stack.Screen name="Notifications"    component={NotificationsScreen} />
+            <Stack.Screen name="ProfileReviews"   component={ProfileReviewsScreen} />
+
           </>
         )}
       </Stack.Navigator>

@@ -16,11 +16,13 @@ import { getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc } 
 
 import { FONTS, SHADOWS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
+import { useUser } from '../context/UserContext';
 
 export default function NotificationsScreen() {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation();
+  const { user } = useUser();
   const auth = getAuth();
   const db = getFirestore();
   const currentUser = auth.currentUser;
@@ -46,18 +48,39 @@ export default function NotificationsScreen() {
   }, [currentUser]);
 
   const handleNotificationPress = async (notif) => {
+    // Mark as read
     if (!notif.read && currentUser) {
       try {
         await updateDoc(doc(db, 'users', currentUser.uid, 'notifications', notif.id), {
-          read: true
+          read: true,
         });
       } catch (error) {
         console.error('Error marking notification as read', error);
       }
     }
-    
-    // If it's a comment, maybe navigate to profile. For now, we just mark it as read.
-    // navigation.navigate('Profile');
+
+    // Navigate to own profile's comments page
+    if (notif.type === 'comment') {
+      navigation.navigate('RoommateProfile', {
+        roommate: {
+          uid: currentUser.uid,
+          name: user?.name || user?.username || 'Mon Profil',
+          photo: user?.photo || null,
+          image: user?.photo || null,
+          city: user?.city || '',
+          age: user?.age || null,
+          description: user?.description || '',
+          bio: user?.description || '',
+          compatibility: null,
+          budget: user?.budget || null,
+          interests: user?.interests || [],
+          habits: user?.habits || [],
+          lifestyle: user?.lifestyle || [],
+          experiences: [],
+          recommended: false,
+        },
+      });
+    }
   };
 
   const renderItem = ({ item }) => {

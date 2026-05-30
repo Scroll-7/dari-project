@@ -67,6 +67,7 @@ export default function RoommateProfileScreen({ route }) {
 
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
+  const [selectedRating, setSelectedRating] = useState(0);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -112,6 +113,7 @@ export default function RoommateProfileScreen({ route }) {
         // Create mode
         await addDoc(collection(db, 'users', roommate.uid, 'comments'), {
           text: newComment.trim(),
+          rating: selectedRating,
           authorId: currentUser.uid,
           authorName: user?.name || user?.username || currentUser.displayName || 'Utilisateur',
           createdAt: serverTimestamp(),
@@ -129,6 +131,7 @@ export default function RoommateProfileScreen({ route }) {
         }
       }
       setNewComment('');
+      setSelectedRating(0);
     } catch (error) {
       console.error('Error submitting comment: ', error);
       Alert.alert('Erreur', 'Impossible de sauvegarder le commentaire.');
@@ -140,6 +143,7 @@ export default function RoommateProfileScreen({ route }) {
   const handleEditClick = (comment) => {
     setEditingCommentId(comment.id);
     setNewComment(comment.text);
+    setSelectedRating(comment.rating || 0);
   };
 
   const handleDeleteComment = (commentId) => {
@@ -240,30 +244,46 @@ export default function RoommateProfileScreen({ route }) {
         </View>
 
         {/* ── Interests ── */}
-        <View style={styles.section}>
-          <SectionTitle label="Centres d'intérêt" />
-          <View style={styles.tagWrap}>
-            {roommate.interests.map((t) => (
-              <Tag key={t} text={t} />
-            ))}
+        {roommate.interests?.length > 0 && (
+          <View style={styles.section}>
+            <SectionTitle label="Centres d'intérêt" />
+            <View style={styles.tagWrap}>
+              {roommate.interests.map((t) => (
+                <Tag key={t} text={t} />
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* ── Habits ── */}
-        <View style={styles.section}>
-          <SectionTitle label="Habitudes de vie" />
-          <View style={styles.tagWrap}>
-            {roommate.habits.map((h) => {
-              const isBad = h.includes('Noctambule') || h.includes('Fumeur');
-              return <Tag key={h} text={h} accent={!isBad} />;
-            })}
+        {roommate.habits?.length > 0 && (
+          <View style={styles.section}>
+            <SectionTitle label="Habitudes de vie" />
+            <View style={styles.tagWrap}>
+              {roommate.habits.map((h) => {
+                const isBad = h.includes('Noctambule') || h.includes('Fumeur');
+                return <Tag key={h} text={h} accent={!isBad} />;
+              })}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* ── Avis et Commentaires ── */}
         <View style={styles.section}>
-          <SectionTitle label="Avis d'anciens colocataires" />
-          
+          {/* Section header with avg rating */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SIZES.medium }}>
+            <SectionTitle label="Avis d'anciens colocataires" />
+            {comments.filter(c => c.rating > 0).length > 0 && (
+              <View style={styles.avgBadge}>
+                <Ionicons name="star" size={13} color="#F59E0B" />
+                <Text style={styles.avgText}>
+                  {(comments.filter(c => c.rating > 0).reduce((s, c) => s + c.rating, 0) / comments.filter(c => c.rating > 0).length).toFixed(1)}
+                </Text>
+                <Text style={styles.avgCount}> ({comments.filter(c => c.rating > 0).length})</Text>
+              </View>
+            )}
+          </View>
+
           {/* Mock experiences (if any) */}
           {roommate.experiences?.map((exp, idx) => (
             <View key={exp.id} style={styles.expCard}>
@@ -306,7 +326,8 @@ export default function RoommateProfileScreen({ route }) {
                     )}
                   </View>
                 </View>
-                <Text style={styles.expNote}>{comment.text}</Text>
+                {comment.rating > 0 && <Stars count={comment.rating} />}
+                <Text style={[styles.expNote, { marginTop: comment.rating > 0 ? 4 : 0 }]}>{comment.text}</Text>
               </View>
             </View>
           ))}
@@ -315,9 +336,30 @@ export default function RoommateProfileScreen({ route }) {
             <Text style={styles.noExp}>Aucun avis pour le moment.</Text>
           )}
 
-          {/* Add/Edit Comment Input */}
-          {roommate.uid && (
+          {/* Add/Edit Comment Input — hide on own profile */}
+          {roommate.uid && currentUser?.uid !== roommate.uid && (
             <View style={styles.commentInputWrap}>
+              {/* Star picker */}
+              {!editingCommentId && (
+                <View style={styles.starPickerRow}>
+                  <Text style={styles.starPickerLabel}>Note :</Text>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <TouchableOpacity key={s} onPress={() => setSelectedRating(s)} activeOpacity={0.7}>
+                      <Ionicons
+                        name={s <= selectedRating ? 'star' : 'star-outline'}
+                        size={28}
+                        color={s <= selectedRating ? '#F59E0B' : colors.textLight}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                  {selectedRating > 0 && (
+                    <TouchableOpacity onPress={() => setSelectedRating(0)} style={{ marginLeft: 4 }}>
+                      <Ionicons name="close-circle" size={18} color={colors.textLight} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
               <TextInput
                 style={[styles.commentInput, { color: colors.text, borderColor: colors.line }]}
                 placeholder="Laissez un commentaire..."
@@ -333,6 +375,7 @@ export default function RoommateProfileScreen({ route }) {
                     onPress={() => {
                       setEditingCommentId(null);
                       setNewComment('');
+                      setSelectedRating(0);
                     }}
                   >
                     <Text style={[styles.commentBtnText, { color: colors.text }]}>Annuler</Text>
@@ -358,13 +401,15 @@ export default function RoommateProfileScreen({ route }) {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* ── Fixed bottom action bar ── */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.chatBtn} onPress={handleChat} activeOpacity={0.85}>
-          <Ionicons name="chatbubble-ellipses" size={20} color={colors.white} />
-          <Text style={styles.chatBtnText}>Envoyer un message</Text>
-        </TouchableOpacity>
-      </View>
+      {/* ── Fixed bottom action bar — only show when viewing someone else's profile ── */}
+      {currentUser?.uid !== roommate.uid && (
+        <View style={styles.bottomBar}>
+          <TouchableOpacity style={styles.chatBtn} onPress={handleChat} activeOpacity={0.85}>
+            <Ionicons name="chatbubble-ellipses" size={20} color={colors.white} />
+            <Text style={styles.chatBtnText}>Envoyer un message</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -553,5 +598,37 @@ const getStyles = (colors) => StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     ...FONTS.body2,
+  },
+  
+  // Rating & Stars
+  avgBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: SIZES.radius.pill,
+  },
+  avgText: {
+    ...FONTS.body2,
+    fontWeight: '700',
+    color: '#F59E0B',
+    marginLeft: 4,
+  },
+  avgCount: {
+    ...FONTS.caption,
+    color: colors.textLight,
+  },
+  starPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 4,
+  },
+  starPickerLabel: {
+    ...FONTS.body2,
+    color: colors.text,
+    marginRight: 8,
+    fontWeight: '600',
   },
 });
