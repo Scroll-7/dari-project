@@ -15,6 +15,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { getAuth } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase/auth';
 import { useTheme } from '../context/ThemeContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useUser } from '../context/UserContext';
@@ -24,12 +28,12 @@ import { PROPERTIES } from '../constants/mockData';
 // ─── Static config ────────────────────────────────────────────────────────────
 
 const getMenu = (colors) => [
-  { icon: 'heart-outline',         label: 'Saved Properties',  screen: 'SavedProperties', color: colors.rose },
-  { icon: 'document-text-outline', label: 'My Listings',       screen: 'MyListings',      color: colors.primary },
-  { icon: 'bar-chart-outline',    label: 'Market Insights',   screen: 'MarketInsights',  color: colors.teal },
-  { icon: 'settings-outline',      label: 'Settings',          screen: 'Settings',        color: colors.textLight },
-  { icon: 'help-circle-outline',   label: 'Help & Support',    screen: 'Help',            color: colors.gold },
-  { icon: 'log-out-outline',       label: 'Log Out',           screen: null,              color: colors.error },
+  { icon: 'options-outline',        label: 'Mes Préférences',   screen: 'EditPreferences', color: colors.primary },
+  { icon: 'heart-outline',          label: 'Saved Properties',  screen: 'SavedProperties', color: colors.rose },
+  { icon: 'document-text-outline',  label: 'My Listings',       screen: 'MyListings',      color: colors.primary },
+  { icon: 'bar-chart-outline',      label: 'Market Insights',   screen: 'MarketInsights',  color: colors.teal },
+  { icon: 'help-circle-outline',    label: 'Help & Support',    screen: 'Help',            color: colors.gold },
+  { icon: 'log-out-outline',        label: 'Log Out',           screen: null,              color: colors.error },
 ];
 
 const BADGES = [
@@ -53,6 +57,29 @@ export default function ProfileScreen({ navigation }) {
 
   const savedCount    = getFavoriteIds().length;
   const listingsCount = PROPERTIES.filter((p) => p.featured).length;
+
+  const pickImage = async () => {
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.3,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        const b64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        const uid = getAuth().currentUser?.uid;
+        if (uid) {
+          await updateDoc(doc(db, 'users', uid), { photo: b64 });
+        }
+      }
+    } catch (error) {
+      console.log('Error picking image:', error);
+      Alert.alert('Error', 'Could not pick image from gallery.');
+    }
+  };
 
   const handlePress = async (item) => {
     if (!item.screen) {
@@ -84,22 +111,27 @@ export default function ProfileScreen({ navigation }) {
             <Ionicons name="arrow-back" size={20} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Mon Profil</Text>
-          <TouchableOpacity style={styles.editBtn} onPress={() => setShowEdit(true)}>
+          <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('Settings')}>
             <Ionicons name="create-outline" size={20} color={colors.white} />
           </TouchableOpacity>
         </LinearGradient>
 
         {/* ── Profile card ── */}
         <View style={styles.profileCard}>
-          {user?.photo ? (
-            <Image source={{ uri: user.photo }} style={styles.avatarImg} />
-          ) : (
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitials}>
-                {(user?.name ?? 'U').charAt(0).toUpperCase()}
-              </Text>
+          <TouchableOpacity onPress={pickImage} activeOpacity={0.8} style={styles.avatarContainer}>
+            {user?.photo ? (
+              <Image source={{ uri: user.photo }} style={styles.avatarImg} />
+            ) : (
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarInitials}>
+                  {(user?.name ?? 'U').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View style={styles.editAvatarBadge}>
+              <Ionicons name="camera" size={14} color="#fff" />
             </View>
-          )}
+          </TouchableOpacity>
           <Text style={styles.name}>{user?.name ?? 'Utilisateur'}</Text>
           {!!user?.username && (
             <Text style={styles.username}>@{user.username}</Text>
@@ -233,29 +265,37 @@ const getStyles = (colors) => StyleSheet.create({
 
   // Profile card
   profileCard: {
-    alignItems: 'center',
     backgroundColor: colors.card,
     marginHorizontal: SIZES.medium,
     borderRadius: SIZES.radius.xl,
-    paddingTop: 40,
-    paddingBottom: SIZES.large,
-    paddingHorizontal: SIZES.large,
+    padding: SIZES.large,
+    alignItems: 'center',
     marginTop: -40,
     ...SHADOWS.medium,
   },
-  avatarCircle: {
-    width: 84, height: 84, borderRadius: 42,
-    backgroundColor: colors.primary,
-    justifyContent: 'center', alignItems: 'center',
+  avatarContainer: {
     marginBottom: SIZES.medium,
-    borderWidth: 4, borderColor: colors.card,
-    ...SHADOWS.glow,
+    position: 'relative',
   },
-  avatarInitials: { fontSize: 32, fontWeight: '700', color: colors.white },
+  avatarCircle: {
+    width: 90, height: 90, borderRadius: 45,
+    backgroundColor: colors.primaryOpacity,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 3, borderColor: colors.card,
+  },
+  avatarInitials: { ...FONTS.h1, color: colors.primary, fontSize: 32 },
   avatarImg: {
-    width: 84, height: 84, borderRadius: 42,
-    marginBottom: SIZES.medium,
-    borderWidth: 4, borderColor: colors.card,
+    width: 90, height: 90, borderRadius: 45,
+    borderWidth: 3, borderColor: colors.card,
+  },
+  editAvatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.primary,
+    width: 28, height: 28, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: colors.card,
   },
   name:  { ...FONTS.h2, color: colors.text },
   username: { ...FONTS.body2, color: colors.primary, fontWeight: '600', marginTop: 2 },
