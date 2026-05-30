@@ -188,13 +188,13 @@ function RoommateCard({ item, onPress, onChat }) {
   const styles = getStyles(colors);
   const initials = item.name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
   const avatarColor = pickAvatarColor(item.name);
-  const CardContainer = item.isReal ? View : TouchableOpacity;
+  const CardContainer = TouchableOpacity;
 
   return (
     <CardContainer
       style={styles.card}
-      onPress={item.isReal ? undefined : onPress}
-      activeOpacity={item.isReal ? undefined : 0.88}
+      onPress={onPress}
+      activeOpacity={0.88}
     >
       {/* Left: photo or initials */}
       <View style={styles.photoWrap}>
@@ -384,7 +384,7 @@ export default function RoommatesScreen() {
           renderItem={({ item }) => (
             <RoommateCard
               item={item}
-              onPress={() => !item.isReal && navigation.navigate('RoommateProfile', { roommate: item })}
+              onPress={() => navigation.navigate('RoommateProfile', { roommate: item })}
               onChat={handleChat}
             />
           )}

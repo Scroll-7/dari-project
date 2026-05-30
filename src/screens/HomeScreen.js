@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Image,
@@ -12,6 +12,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore';
 
 import PropertyCard from '../components/PropertyCard';
 import { SectionHeader } from '../components/SectionHeader';
@@ -65,7 +67,24 @@ export default function HomeScreen({ navigation }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const [quickFilter, setQuickFilter] = useState('all');
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const auth = getAuth();
+    const db = getFirestore();
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    const q = query(
+      collection(db, 'users', currentUser.uid, 'notifications'),
+      where('read', '==', false)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setUnreadNotifs(snap.docs.length);
+    });
+    return unsub;
+  }, []);
 
   const CATEGORIES = CATEGORIES_DATA.map(cat => ({
     ...cat,
@@ -108,9 +127,9 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.headline}>Trouvez votre chez-vous</Text>
         </View>
         <View style={styles.topBarRight}>
-          <TouchableOpacity style={styles.notifBtn} onPress={() => navigation.navigate('Inbox')}>
+          <TouchableOpacity style={styles.notifBtn} onPress={() => navigation.navigate('Notifications')}>
             <Ionicons name="notifications-outline" size={22} color={colors.text} />
-            <View style={styles.notifDot} />
+            {unreadNotifs > 0 && <View style={styles.notifDot} />}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Profile')}
