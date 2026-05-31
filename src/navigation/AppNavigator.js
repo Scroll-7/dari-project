@@ -51,13 +51,13 @@ import { useUser }             from '../context/UserContext';
 const Stack = createNativeStackNavigator();
 const Tab   = createBottomTabNavigator();
 
-// ─── Tab config ───────────────────────────────────────────────────────────────
+// ─── Tab config ─────────────────────────────────────────────────────
 
 const TABS = [
   { name: 'Home',      label: 'Home',      iconActive: 'home',          iconInactive: 'home-outline' },
   { name: 'Roommates', label: 'Roommates', iconActive: 'people',         iconInactive: 'people-outline' },
-  { name: 'ADD',       label: 'Post',      iconActive: 'add',            iconInactive: 'add' }, // FAB placeholder
-  { name: 'Inbox',     label: 'Inbox',     iconActive: 'chatbubble',     iconInactive: 'chatbubble-outline', badge: 3 },
+  { name: 'ADD',       label: 'Post',      iconActive: 'add',            iconInactive: 'add' },
+  { name: 'Inbox',     label: 'Inbox',     iconActive: 'chatbubble',     iconInactive: 'chatbubble-outline' },
   { name: 'Services',  label: 'Services',  iconActive: 'construct',      iconInactive: 'construct-outline' },
 ];
 
@@ -119,11 +119,6 @@ function CustomTabBar({ state, descriptors, navigation }) {
             >
               <View style={[styles.tabIconWrap, focused && styles.tabIconWrapActive]}>
                 <Ionicons name={iconName} size={22} color={focused ? colors.primary : colors.textLight} />
-                {cfg.badge && !focused && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{cfg.badge}</Text>
-                  </View>
-                )}
               </View>
               <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
                 {cfg.label}
@@ -172,10 +167,12 @@ function AppNavigatorContent() {
   const { colors } = useTheme();
   const [showSplash, setShowSplash] = useState(true);
 
-  // Service providers skip the preferences onboarding (budget / interests / lifestyle
-  // are renter/roommate concepts — not relevant for a service provider).
+  // Landlords skip the preferences onboarding entirely.
+  // Service providers see a different category picker screen.
+  // Tenants see the budget/lifestyle preferences screen.
   const isServiceProvider = role === 'service';
-  const needsPreferences = !hasPreferences && !isServiceProvider;
+  const isLandlord = role === 'landlord';
+  const needsOnboarding = !hasPreferences && !isLandlord;
 
   // Show splash on first launch (before auth check completes or after)
   if (showSplash) {
@@ -201,9 +198,9 @@ function AppNavigatorContent() {
           <>
             <Stack.Screen name="WelcomeUsername" component={WelcomeUsernameScreen} />
           </>
-        ) : needsPreferences ? (
+        ) : needsOnboarding ? (
           // Username set but preferences not yet filled → onboarding step 2
-          // (skipped entirely for service providers)
+          // (skipped entirely for landlords)
           <>
             {isServiceProvider ? (
               // Service providers pick their trade category instead
@@ -278,13 +275,13 @@ const getStyles = (colors) => StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     alignItems: 'flex-end',
   },
 
   // Regular tab item
   tabItem: {
-    flex: 1,
+    width: 75,
     alignItems: 'center',
     gap: 4,
     paddingBottom: 2,
@@ -320,7 +317,7 @@ const getStyles = (colors) => StyleSheet.create({
 
   // FAB (center)
   fabWrap: {
-    flex: 1,
+    width: 75,
     alignItems: 'center',
     marginBottom: 10,
   },

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  Share,
 } from 'react-native';
 import { useFavorites } from '../context/FavoritesContext';
 import { useConversations } from '../context/ConversationContext';
@@ -21,23 +22,14 @@ import { useTheme } from '../context/ThemeContext';
 
 // ─── Mock extensions ──────────────────────────────────────────────────────────
 
-const AMENITIES = [
-  { icon: 'wifi-outline',    label: 'WiFi' },
-  { icon: 'car-outline',     label: 'Parking' },
-  { icon: 'snow-outline',    label: 'A/C' },
-  { icon: 'shield-checkmark-outline', label: 'Secured' },
-  { icon: 'tv-outline',      label: 'TV' },
-  { icon: 'fitness-outline', label: 'Gym' },
+const ALL_AMENITIES = [
+  { key: 'wifi',    icon: 'wifi-outline',              label: 'WiFi' },
+  { key: 'parking', icon: 'car-outline',               label: 'Parking' },
+  { key: 'ac',      icon: 'snow-outline',              label: 'A/C' },
+  { key: 'secured', icon: 'shield-checkmark-outline',  label: 'Secured' },
+  { key: 'tv',      icon: 'tv-outline',                label: 'TV' },
+  { key: 'gym',     icon: 'fitness-outline',           label: 'Gym' },
 ];
-
-const AGENT = {
-  name: 'Amira Khedija',
-  role: 'Agent immobilier senior',
-  image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
-  rating: 4.9,
-  reviews: 124,
-  phone: '+216 55 123 456',
-};
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -85,6 +77,16 @@ export default function PropertyDetailScreen({ route, navigation }) {
     navigation.navigate('Chat', { personId: `prop_${property.id}` });
   }, [property, navigation, openOrCreateConversation]);
 
+  const handleShare = useCallback(async () => {
+    try {
+      await Share.share({
+        message: `Découvrez cette propriété sur Dari : ${property.title} à ${property.price.toLocaleString()} TND/${property.period}`,
+      });
+    } catch (error) {
+      console.error(error.message);
+    }
+  }, [property]);
+
   const pricePerM2 = property.area
     ? Math.round(property.price / property.area)
     : null;
@@ -112,7 +114,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
               <TouchableOpacity style={styles.heroBtn} onPress={() => toggleFavorite(property.id)}>
                 <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? colors.accent : colors.white} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.heroBtn}>
+              <TouchableOpacity style={styles.heroBtn} onPress={handleShare}>
                 <Ionicons name="share-social-outline" size={20} color={colors.white} />
               </TouchableOpacity>
             </View>
@@ -154,35 +156,54 @@ export default function PropertyDetailScreen({ route, navigation }) {
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.desc}>{property.description}</Text>
 
-          {/* Amenities */}
-          <Text style={styles.sectionTitle}>Équipements</Text>
-          <View style={styles.amenitiesGrid}>
-            {AMENITIES.map((a) => (
-              <AmenityChip key={a.label} icon={a.icon} label={a.label} colors={colors} styles={styles} />
-            ))}
-          </View>
+          {/* Amenities — only show selected ones */}
+          {Array.isArray(property.amenities) && property.amenities.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Équipements</Text>
+              <View style={styles.amenitiesGrid}>
+                {ALL_AMENITIES
+                  .filter(a => property.amenities.includes(a.key))
+                  .map(a => (
+                    <AmenityChip key={a.key} icon={a.icon} label={a.label} colors={colors} styles={styles} />
+                  ))}
+              </View>
+            </>
+          )}
 
-          {/* Virtual tour button */}
-          <TouchableOpacity style={styles.tourBtn} activeOpacity={0.85}>
-            <LinearGradient colors={GRADIENTS.teal} style={styles.tourGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              <Ionicons name="videocam-outline" size={20} color={colors.white} />
-              <Text style={styles.tourText}>Visite Virtuelle 360°</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Agent card */}
-          <Text style={styles.sectionTitle}>Agent responsable</Text>
-          <View style={styles.agentCard}>
-            <Image source={{ uri: AGENT.image }} style={styles.agentImg} />
-            <View style={styles.agentInfo}>
-              <Text style={styles.agentName}>{AGENT.name}</Text>
-              <Text style={styles.agentRole}>{AGENT.role}</Text>
-              <StarRating rating={AGENT.rating} reviews={AGENT.reviews} size={12} />
-            </View>
-            <TouchableOpacity style={styles.agentChatBtn} onPress={handleChat}>
-              <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
+          {/* Virtual tour button — only shown if a 360 photo/video was uploaded */}
+          {!!property.tour360 && (
+            <TouchableOpacity style={styles.tourBtn} activeOpacity={0.85} onPress={() => Linking.openURL(property.tour360)}>
+              <LinearGradient colors={GRADIENTS.teal} style={styles.tourGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <Ionicons name="videocam-outline" size={20} color={colors.white} />
+                <Text style={styles.tourText}>Visite Virtuelle 360°</Text>
+              </LinearGradient>
             </TouchableOpacity>
-          </View>
+          )}
+
+          {/* Agent card — uses real poster info from property.agent */}
+          {property.agent && (
+            <>
+              <Text style={styles.sectionTitle}>Propriétaire</Text>
+              <View style={styles.agentCard}>
+                {property.agent.image ? (
+                  <Image source={{ uri: property.agent.image }} style={styles.agentImg} />
+                ) : (
+                  <View style={[styles.agentImg, { backgroundColor: colors.primaryOpacity, justifyContent: 'center', alignItems: 'center' }]}>
+                    <Text style={{ fontSize: 22, color: colors.primary, fontWeight: '700' }}>
+                      {(property.agent.name || 'P').charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.agentInfo}>
+                  <Text style={styles.agentName}>{property.agent.name || 'Propriétaire'}</Text>
+                  <Text style={styles.agentRole}>Propriétaire</Text>
+                </View>
+                <TouchableOpacity style={styles.agentChatBtn} onPress={handleChat}>
+                  <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
 
         </View>
       </ScrollView>
@@ -214,6 +235,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
 const getStyles = (colors) => StyleSheet.create({
   safe:   { flex: 1, backgroundColor: colors.background },
   scroll: { paddingBottom: 100 },
+
 
   // Hero
   hero:       { height: 320, position: 'relative' },

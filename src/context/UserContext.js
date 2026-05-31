@@ -107,6 +107,7 @@ export function UserProvider({ children }) {
         avatarUrl: updated.photo,
         username: updated.username,
         age: updated.age,
+        description: updated.description || '', // Save bio/description to Firestore
       });
     } catch (e) {
       console.warn('UserContext updateUser error:', e);

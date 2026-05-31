@@ -1,8 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, Modal, Pressable, Alert, Platform } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { getFirestore, doc, deleteDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { useFavorites } from '../context/FavoritesContext';
+import { useUser } from '../context/UserContext';
 import { FONTS, SHADOWS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 
@@ -23,8 +27,13 @@ const PropertyCard = React.memo(function PropertyCard({
 }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
+  const navigation = useNavigation();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { user } = useUser();
   const saved = isFavorite(property.id);
+  const auth = getAuth();
+  const isOwner = auth.currentUser?.uid && property.uid === auth.currentUser?.uid;
+  const [showOptions, setShowOptions] = React.useState(false);
 
   const handleFav = useCallback(
     (e) => {
@@ -32,6 +41,56 @@ const PropertyCard = React.memo(function PropertyCard({
       toggleFavorite(property.id);
     },
     [property.id, toggleFavorite]
+  );
+
+  const handleOptions = useCallback((e) => {
+    e.stopPropagation?.();
+    setShowOptions(true);
+  }, []);
+
+  const handleEdit = useCallback(() => {
+    setShowOptions(false);
+    navigation.navigate('PostProperty', { editProperty: property });
+  }, [navigation, property]);
+
+  const handleDelete = useCallback(() => {
+    setShowOptions(false);
+    Alert.alert('Confirmer', 'Voulez-vous vraiment supprimer cette annonce ?', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Supprimer', style: 'destructive', onPress: async () => {
+          try {
+            const db = getFirestore();
+            await deleteDoc(doc(db, 'properties', property.id));
+          } catch (error) {
+            console.error("Erreur de suppression", error);
+          }
+      }}
+    ]);
+  }, [property]);
+
+  const renderOptionsModal = () => (
+    <Modal visible={showOptions} transparent animationType="fade">
+      <Pressable style={styles.modalBackdrop} onPress={() => setShowOptions(false)}>
+        <Pressable style={styles.bottomSheet} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.sheetHandle} />
+          <Text style={styles.sheetTitle}>Options de l'annonce</Text>
+          
+          <TouchableOpacity style={styles.sheetItem} onPress={handleEdit} activeOpacity={0.7}>
+            <View style={styles.sheetIconWrap}>
+              <Ionicons name="pencil-outline" size={20} color={colors.text} />
+            </View>
+            <Text style={styles.sheetItemText}>Modifier</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={[styles.sheetItem, { borderBottomWidth: 0 }]} onPress={handleDelete} activeOpacity={0.7}>
+            <View style={[styles.sheetIconWrap, { backgroundColor: colors.error + '20' }]}>
+              <Ionicons name="trash-outline" size={20} color={colors.error} />
+            </View>
+            <Text style={[styles.sheetItemText, { color: colors.error }]}>Supprimer</Text>
+          </TouchableOpacity>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 
   if (horizontal) {
@@ -62,6 +121,11 @@ const PropertyCard = React.memo(function PropertyCard({
             </View>
           </View>
         </View>
+        {isOwner && (
+          <TouchableOpacity style={[styles.horzFav, { marginRight: 8 }]} onPress={handleOptions} activeOpacity={0.8}>
+            <Ionicons name="ellipsis-horizontal" size={16} color={colors.textLight} />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.horzFav} onPress={handleFav} activeOpacity={0.8}>
           <Ionicons
             name={saved ? 'heart' : 'heart-outline'}
@@ -69,6 +133,7 @@ const PropertyCard = React.memo(function PropertyCard({
             color={saved ? colors.accent : colors.textLight}
           />
         </TouchableOpacity>
+        {renderOptionsModal()}
       </TouchableOpacity>
     );
   }
@@ -96,6 +161,13 @@ const PropertyCard = React.memo(function PropertyCard({
             color={saved ? colors.accent : colors.white}
           />
         </TouchableOpacity>
+
+        {/* Owner options button */}
+        {isOwner && (
+          <TouchableOpacity style={styles.optionsBtn} onPress={handleOptions} activeOpacity={0.85}>
+            <Ionicons name="ellipsis-horizontal" size={18} color={colors.white} />
+          </TouchableOpacity>
+        )}
 
         {/* Price badge */}
         <View style={styles.priceBadge}>
@@ -131,6 +203,7 @@ const PropertyCard = React.memo(function PropertyCard({
           </View>
         </View>
       </View>
+      {renderOptionsModal()}
     </TouchableOpacity>
   );
 });
@@ -159,6 +232,17 @@ const getStyles = (colors) => StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  optionsBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 54, // placed to the left of the fav btn
     width: 34,
     height: 34,
     borderRadius: 17,
@@ -232,5 +316,55 @@ const getStyles = (colors) => StyleSheet.create({
     width: 36,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  // ── Modal Bottom Sheet ─────────────────────────────────────────
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheet: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: SIZES.large,
+    paddingBottom: Platform.OS === 'ios' ? 40 : SIZES.large,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: colors.line,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: SIZES.medium,
+  },
+  sheetTitle: {
+    ...FONTS.h3,
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: SIZES.large,
+    fontWeight: '700',
+  },
+  sheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  sheetIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  sheetItemText: {
+    ...FONTS.body1,
+    color: colors.text,
+    fontWeight: '600',
   },
 });
