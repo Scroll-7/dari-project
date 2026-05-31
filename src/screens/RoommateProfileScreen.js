@@ -238,10 +238,12 @@ export default function RoommateProfileScreen({ route }) {
         </View>
 
         {/* ── Bio ── */}
-        <View style={styles.section}>
-          <SectionTitle label="À propos" />
-          <Text style={styles.bio}>{roommate.bio}</Text>
-        </View>
+        {!!roommate.bio && (
+          <View style={styles.section}>
+            <SectionTitle label="À propos" />
+            <Text style={styles.bio}>{roommate.bio}</Text>
+          </View>
+        )}
 
         {/* ── Interests ── */}
         {roommate.interests?.length > 0 && (

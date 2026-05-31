@@ -68,7 +68,7 @@ export default function SignupScreen({ navigation }) {
       >
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.headerContainer}>
-            <Text style={styles.title}>Join Dari+</Text>
+            <Text style={styles.title}>Join Dari</Text>
             <Text style={styles.subtitle}>
               Create an account to start finding your perfect home or roommate.
             </Text>

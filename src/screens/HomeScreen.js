@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
 import PropertyCard from '../components/PropertyCard';
 import { SectionHeader } from '../components/SectionHeader';
@@ -68,6 +68,7 @@ export default function HomeScreen({ navigation }) {
   const styles = getStyles(colors);
   const [quickFilter, setQuickFilter] = useState('all');
   const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [liveProperties, setLiveProperties] = useState([]);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -80,10 +81,20 @@ export default function HomeScreen({ navigation }) {
       collection(db, 'users', currentUser.uid, 'notifications'),
       where('read', '==', false)
     );
-    const unsub = onSnapshot(q, (snap) => {
+    const unsubNotifs = onSnapshot(q, (snap) => {
       setUnreadNotifs(snap.docs.length);
     });
-    return unsub;
+
+    const qProps = query(collection(db, 'properties'), orderBy('createdAt', 'desc'));
+    const unsubProps = onSnapshot(qProps, (snap) => {
+      const props = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setLiveProperties(props);
+    });
+
+    return () => {
+      unsubNotifs();
+      unsubProps();
+    };
   }, []);
 
   const CATEGORIES = CATEGORIES_DATA.map(cat => ({
@@ -105,11 +116,12 @@ export default function HomeScreen({ navigation }) {
   });
 
   const filteredProperties = useCallback(() => {
-    if (quickFilter === 'featured') return PROPERTIES.filter((p) => p.featured);
-    if (quickFilter === 'new')      return PROPERTIES.slice(-5);
-    if (quickFilter === 'cheap')    return PROPERTIES.filter((p) => p.price < 1000);
-    return PROPERTIES.slice(0, 6);
-  }, [quickFilter])();
+    const allProps = [...liveProperties, ...PROPERTIES];
+    if (quickFilter === 'featured') return allProps.filter((p) => p.featured);
+    if (quickFilter === 'new')      return allProps.slice(0, 5);
+    if (quickFilter === 'cheap')    return allProps.filter((p) => p.price < 1000);
+    return allProps.slice(0, 6);
+  }, [quickFilter, liveProperties])();
 
   const handlePropPress = useCallback(
     (property) => navigation.navigate('PropertyDetail', { property }),
@@ -233,20 +245,7 @@ export default function HomeScreen({ navigation }) {
           />
         ))}
 
-        {/* ── Top Agents ── */}
-        <SectionHeader
-          title="Agents vedettes"
-          style={styles.sectionHeader}
-        />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.agentsRow}
-        >
-          {AGENTS.map((a) => (
-            <AgentCard key={a.id} agent={a} />
-          ))}
-        </ScrollView>
+
 
         {/* ── Market Insights banner ── */}
         <TouchableOpacity

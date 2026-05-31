@@ -5,14 +5,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, collection, query, where, onSnapshot, doc, deleteDoc, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, query, where, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { useTheme } from '../context/ThemeContext';
+import { useUser } from '../context/UserContext';
 
 export default function MyListingsScreen({ navigation }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useUser();
 
   useEffect(() => {
     const auth = getAuth();
@@ -23,8 +25,9 @@ export default function MyListingsScreen({ navigation }) {
     }
 
     const db = getFirestore();
+    const collectionName = user?.role === 'landlord' ? 'properties' : 'roommatePosts';
     const q = query(
-      collection(db, 'roommatePosts'), 
+      collection(db, collectionName), 
       where('uid', '==', myUid)
     );
 
@@ -38,7 +41,7 @@ export default function MyListingsScreen({ navigation }) {
     });
 
     return unsub;
-  }, []);
+  }, [user?.role]);
 
   const handleDelete = (id) => {
     Alert.alert('Confirmer', 'Voulez-vous vraiment supprimer cette annonce ?', [
@@ -49,7 +52,8 @@ export default function MyListingsScreen({ navigation }) {
         onPress: async () => {
           try {
             const db = getFirestore();
-            await deleteDoc(doc(db, 'roommatePosts', id));
+            const collectionName = user?.role === 'landlord' ? 'properties' : 'roommatePosts';
+            await deleteDoc(doc(db, collectionName, id));
           } catch (e) {
             Alert.alert('Erreur', 'Impossible de supprimer cette annonce.');
             console.error(e);
@@ -62,8 +66,8 @@ export default function MyListingsScreen({ navigation }) {
   const renderPost = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.roleText}>{item.description?.slice(0, 50) || 'Cherche colocation'}</Text>
-        <Text style={styles.price}>{item.budget ? `${item.budget} DT` : ''}</Text>
+        <Text style={styles.roleText}>{item.title || item.description?.slice(0, 50) || 'Annonce'}</Text>
+        <Text style={styles.price}>{item.price || item.budget ? `${item.price || item.budget} DT` : ''}</Text>
       </View>
       <View style={styles.locationWrap}>
         <Ionicons name="location-outline" size={14} color={colors.textLight} />
@@ -73,7 +77,13 @@ export default function MyListingsScreen({ navigation }) {
       <View style={styles.actions}>
         <TouchableOpacity 
           style={styles.editBtn} 
-          onPress={() => navigation.navigate('PostRequest', { editPost: item })}
+          onPress={() => {
+            if (user?.role === 'landlord') {
+              // Optionally handle property edit here
+            } else {
+              navigation.navigate('PostRequest', { editPost: item });
+            }
+          }}
         >
           <Ionicons name="pencil" size={16} color={colors.white} />
           <Text style={styles.btnText}>Modifier</Text>
@@ -108,8 +118,8 @@ export default function MyListingsScreen({ navigation }) {
         <View style={styles.empty}>
           <Ionicons name="document-text-outline" size={56} color="#ccc" />
           <Text style={styles.emptyTitle}>Aucune annonce</Text>
-          <Text style={styles.emptyText}>Vos annonces de colocation apparaîtront ici.</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('PostRequest')}>
+          <Text style={styles.emptyText}>Vos annonces apparaîtront ici.</Text>
+          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate(user?.role === 'landlord' ? 'PostProperty' : 'PostRequest')}>
             <Ionicons name="add" size={18} color={colors.white} />
             <Text style={styles.addBtnText}>Publier une annonce</Text>
           </TouchableOpacity>
@@ -130,7 +140,7 @@ const getStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: { 
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', 
-    padding: 16, backgroundColor: colors.card, borderBottomWidth: 1, borderColor: '#eee' 
+    padding: 16, backgroundColor: colors.card, borderBottomWidth: 1, borderColor: colors.line 
   },
   title: { fontSize: 18, fontWeight: '700', color: colors.text },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -138,33 +148,28 @@ const getStyles = (colors) => StyleSheet.create({
   emptyTitle: { fontSize: 17, fontWeight: '700', color: colors.text, marginTop: 16 },
   emptyText: { fontSize: 14, color: colors.textLight, textAlign: 'center', marginTop: 8 },
   addBtn: { 
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#4461F2', 
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, 
     borderRadius: 14, paddingHorizontal: 20, paddingVertical: 12, marginTop: 24 
   },
   addBtnText: { color: colors.white, fontWeight: '700', fontSize: 14, marginLeft: 6 },
   list: { padding: 16, gap: 12 },
   card: {
     backgroundColor: colors.card, borderRadius: 16, padding: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    ...colors.shadows?.medium,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   roleText: { fontSize: 15, fontWeight: '600', color: colors.text, flex: 1, marginRight: 8 },
-  price: { fontSize: 15, fontWeight: '700', color: '#4461F2' },
+  price: { fontSize: 15, fontWeight: '700', color: colors.primary },
   locationWrap: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   locationText: { fontSize: 13, color: colors.textLight, marginLeft: 4 },
   actions: { flexDirection: 'row', marginTop: 16, gap: 8 },
   editBtn: { 
-    flex: 1, flexDirection: 'row', backgroundColor: '#4461F2', 
+    flex: 1, flexDirection: 'row', backgroundColor: colors.primary, 
     borderRadius: 10, paddingVertical: 10, justifyContent: 'center', alignItems: 'center' 
   },
   deleteBtn: { 
-    flex: 1, flexDirection: 'row', backgroundColor: '#FF4B4B', 
+    flex: 1, flexDirection: 'row', backgroundColor: colors.error, 
     borderRadius: 10, paddingVertical: 10, justifyContent: 'center', alignItems: 'center' 
   },
   btnText: { color: colors.white, fontSize: 14, fontWeight: '600', marginLeft: 6 },
 });
-
-
-
-
