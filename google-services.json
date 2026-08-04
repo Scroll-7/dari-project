@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "742100137395",
+    "project_id": "dari-app-70704",
+    "storage_bucket": "dari-app-70704.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742100137395:android:6a54e98cfb1acf1dda87c6",
+        "android_client_info": {
+          "package_name": "tn.dari.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXWiudIVV_9ty3POUiWkc-EeUMcgUS_Bc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
