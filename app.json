@@ -22,7 +22,7 @@
       "package": "tn.dari.app"
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -38,7 +38,8 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-notifications"
     ],
     "experiments": {
       "reactCompiler": true

@@ -50,6 +50,7 @@ export async function sendMessage(conversationId, senderUid, text) {
     text,
     senderId: senderUid,
     createdAt: serverTimestamp(),
+    pushSent: false,
   });
 
   // Update conversation metadata + bump unread count for the other participant

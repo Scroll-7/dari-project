@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase/auth';
+import { registerForPushNotificationsAsync } from '../notifications';
 
 export const AuthContext = createContext({
   user: null,
@@ -31,6 +32,9 @@ export const AuthProvider = ({ children }) => {
 
       if (firebaseUser) {
         setUser(firebaseUser);
+
+        // Register this device for push notifications (stores expoPushToken on users/{uid})
+        registerForPushNotificationsAsync(firebaseUser.uid);
 
         // Subscribe to this user's Firestore document to detect username + preferences
         unsubscribeDoc = onSnapshot(
