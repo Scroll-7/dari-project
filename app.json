@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "tn.dari.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +19,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.dari"
+      "package": "tn.dari.app"
     },
     "web": {
       "output": "static",
