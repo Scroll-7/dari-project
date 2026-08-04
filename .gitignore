@@ -16,7 +16,7 @@ expo-env.d.ts
 # Native build outputs (regenerated via `npx expo prebuild`)
 android/
 ios/
-dari/
+# dari/ is source code, not a build artifact - do NOT ignore it
 
 # ─── Build artifacts ──────────────────────────────────────────────────────────
 *.apk
