@@ -1,17 +1,8 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Animated, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
@@ -36,30 +27,6 @@ const QUICK_FILTERS = [
   { id: 'new',      label: '🆕 New' },
   { id: 'cheap',    label: '💰 Budget' },
 ];
-
-const AGENTS = [
-  { id: '1', name: 'Amira K.', rating: 4.9, deals: 48, image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200' },
-  { id: '2', name: 'Youssef M.', rating: 4.8, deals: 36, image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200' },
-  { id: '3', name: 'Ines B.', rating: 4.7, deals: 29, image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200' },
-];
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function AgentCard({ agent }) {
-  const { colors } = useTheme();
-  const styles = getStyles(colors);
-  return (
-    <View style={styles.agentCard}>
-      <Image source={{ uri: agent.image }} style={styles.agentImg} />
-      <View style={styles.agentBadge}>
-        <Ionicons name="star" size={8} color={colors.white} />
-        <Text style={styles.agentBadgeText}>{agent.rating}</Text>
-      </View>
-      <Text style={styles.agentName} numberOfLines={1}>{agent.name}</Text>
-      <Text style={styles.agentDeals}>{agent.deals} deals</Text>
-    </View>
-  );
-}
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -103,18 +70,6 @@ export default function HomeScreen({ navigation }) {
     bg: colors.isDark ? 'rgba(255,255,255,0.05)' : '#EEF2FF'
   }));
 
-  // Animated header height collapse
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-  const headerHeight = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [90, 0],
-    extrapolate: 'clamp',
-  });
-
   const filteredProperties = useCallback(() => {
     const allProps = [...liveProperties, ...PROPERTIES];
     if (quickFilter === 'featured') return allProps.filter((p) => p.featured);
@@ -133,9 +88,11 @@ export default function HomeScreen({ navigation }) {
       <StatusBar barStyle={colors.isDark ? "light-content" : "dark-content"} backgroundColor={colors.background} />
 
       {/* ── Fixed top header ── */}
+      <View style={styles.brandContainer}>
+        <Text style={styles.brandText}>Dari</Text>
+      </View>
       <View style={styles.topBar}>
         <View>
-          <Text style={styles.greeting}>Bonjour 👋</Text>
           <Text style={styles.headline}>Trouvez votre chez-vous</Text>
         </View>
         <View style={styles.topBarRight}>
@@ -276,20 +233,30 @@ export default function HomeScreen({ navigation }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const getStyles = (colors) => StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
   scroll: { paddingHorizontal: SIZES.medium, paddingBottom: 110 },
 
   // Top bar
+  brandContainer: {
+    paddingHorizontal: SIZES.medium,
+    paddingTop: 10,
+    backgroundColor: colors.background,
+  },
+  brandText: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.primary,
+    letterSpacing: -0.5,
+  },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SIZES.medium,
-    paddingTop: SIZES.medium,
+    paddingTop: 4,
     paddingBottom: SIZES.small,
     backgroundColor: colors.background,
   },
-  greeting:  { ...FONTS.body2, color: colors.textLight },
   headline:  { ...FONTS.h2, color: colors.text, marginTop: 2 },
   topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   notifBtn: {

@@ -1,14 +1,7 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import {
-  FlatList,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { FlatList, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PropertyCard from '../components/PropertyCard';
 import { useFavorites } from '../context/FavoritesContext';
 import { PROPERTIES } from '../constants/mockData';
@@ -19,7 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 export default function SavedPropertiesScreen({ navigation }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
-  const { getFavoriteIds, toggleFavorite } = useFavorites();
+  const { getFavoriteIds } = useFavorites();
   const savedIds = getFavoriteIds();
   const data     = PROPERTIES.filter((p) => savedIds.includes(p.id));
 
@@ -49,7 +42,7 @@ export default function SavedPropertiesScreen({ navigation }) {
               <Ionicons name="heart-outline" size={48} color={colors.textLight} />
             </View>
             <Text style={styles.emptyTitle}>Aucune propriété sauvegardée</Text>
-            <Text style={styles.emptySub}>Appuyez sur le cœur sur n'importe quelle annonce pour la sauvegarder ici.</Text>
+            <Text style={styles.emptySub}>Appuyez sur le cœur sur n’importe quelle annonce pour la sauvegarder ici.</Text>
             <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate('Search')}>
               <Text style={styles.browseBtnText}>Parcourir les annonces</Text>
             </TouchableOpacity>
@@ -68,7 +61,7 @@ export default function SavedPropertiesScreen({ navigation }) {
 }
 
 const getStyles = (colors) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

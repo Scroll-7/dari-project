@@ -1,16 +1,8 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 
@@ -45,7 +37,7 @@ export default function NotificationsScreen() {
     });
 
     return unsub;
-  }, [currentUser]);
+  }, [currentUser, db]);
 
   const handleNotificationPress = async (notif) => {
     // Mark as read
@@ -101,7 +93,7 @@ export default function NotificationsScreen() {
           <Text style={styles.notifTitle}>
             <Text style={{ fontWeight: 'bold' }}>{item.fromName}</Text> a commenté sur votre profil
           </Text>
-          <Text style={styles.notifMessage} numberOfLines={2}>"{item.message}"</Text>
+          <Text style={styles.notifMessage} numberOfLines={2}>«{item.message}»</Text>
           <Text style={styles.notifTime}>{date}</Text>
         </View>
         {isUnread && <View style={styles.unreadDot} />}
@@ -143,7 +135,7 @@ export default function NotificationsScreen() {
 }
 
 const getStyles = (colors) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

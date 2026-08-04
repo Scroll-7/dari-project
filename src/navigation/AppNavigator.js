@@ -4,15 +4,15 @@ import * as Haptics from 'expo-haptics';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React, { useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { AuthProvider, AuthContext } from '../context/AuthContext';
 import { ConversationProvider } from '../context/ConversationContext';
 import { GRADIENTS, SHADOWS } from '../constants/theme';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { FavoritesProvider } from '../context/FavoritesContext';
-import { UserProvider } from '../context/UserContext';
+import { UserProvider, useUser } from '../context/UserContext';
 
 import ApartmentsScreen        from '../screens/ApartmentsScreen';
 import ChatScreen              from '../screens/ChatScreen';
@@ -33,6 +33,7 @@ import RoomsScreen             from '../screens/RoomsScreen';
 import SavedPropertiesScreen   from '../screens/SavedPropertiesScreen';
 import SearchScreen            from '../screens/SearchScreen';
 import ServiceProvidersScreen  from '../screens/ServiceProvidersScreen';
+import ServiceProviderProfileScreen from '../screens/ServiceProviderProfileScreen';
 import ServicesScreen          from '../screens/ServicesScreen';
 import SettingsScreen          from '../screens/SettingsScreen';
 import WelcomeUsernameScreen         from '../screens/WelcomeUsernameScreen';
@@ -45,8 +46,6 @@ import SplashScreen                  from '../screens/SplashScreen';
 import ServiceCategoryScreen         from '../screens/ServiceCategoryScreen';
 import NotificationsScreen           from '../screens/NotificationsScreen';
 import ProfileReviewsScreen          from '../screens/ProfileReviewsScreen';
-import { useUser }             from '../context/UserContext';
-
 
 const Stack = createNativeStackNavigator();
 const Tab   = createBottomTabNavigator();
@@ -166,6 +165,7 @@ function AppNavigatorContent() {
   const { user, isLoading, hasUsername, hasPreferences, role } = React.useContext(AuthContext);
   const { colors } = useTheme();
   const [showSplash, setShowSplash] = useState(true);
+  const handleSplashFinish = React.useCallback(() => setShowSplash(false), []);
 
   // Landlords skip the preferences onboarding entirely.
   // Service providers see a different category picker screen.
@@ -176,7 +176,7 @@ function AppNavigatorContent() {
 
   // Show splash on first launch (before auth check completes or after)
   if (showSplash) {
-    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+    return <SplashScreen onFinish={handleSplashFinish} />;
   }
 
   if (isLoading) {
@@ -234,6 +234,7 @@ function AppNavigatorContent() {
             <Stack.Screen name="EditPreferences"  component={EditPreferencesScreen} />
             <Stack.Screen name="Notifications"    component={NotificationsScreen} />
             <Stack.Screen name="ProfileReviews"   component={ProfileReviewsScreen} />
+            <Stack.Screen name="ServiceProviderProfile" component={ServiceProviderProfileScreen} />
 
           </>
         )}

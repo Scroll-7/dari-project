@@ -1,35 +1,16 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getAuth } from 'firebase/auth';
-import { subscribeToConversations } from '../firebase/chat';
+import { subscribeToConversations, deleteConversation as deleteFirebaseConversation } from '../firebase/chat';
 import { useConversations } from '../context/ConversationContext';
 import { FONTS, SHADOWS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
+import DEFAULT_AVATAR from '../constants/defaultAvatar';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function getInitials(name = '') {
-  return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
-}
-
-const AVATAR_COLORS = ['#4461F2','#E83E8C','#20C997','#FD7E14','#6F42C1','#FFC107','#D85A30'];
-function pickColor(name = '') {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + h * 31;
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
-}
 
 function formatTime(date) {
   if (!date) return '';
@@ -51,22 +32,22 @@ const TAG_CONFIG = {
 
 // ─── Chat Row ─────────────────────────────────────────────────────────────────
 
-function ChatRow({ item, onPress }) {
+function ChatRow({ item, onPress, onDelete, myUid }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const name = item.name || item.otherName || 'Utilisateur';
-  const color = item.avatarColor || pickColor(name);
-  const initials = item.initials || getInitials(name);
   const preview = item.lastMessage || 'Démarrez la conversation…';
   const timeStr = item.time || (item.lastTime ? formatTime(item.lastTime) : '');
   const tagKey = item.tag || 'firebase';
   const tag = TAG_CONFIG[tagKey];
+  const unread = item.unread || item.unreadCounts?.[myUid] || 0;
 
   return (
     <TouchableOpacity style={styles.chatRow} onPress={() => onPress(item)} activeOpacity={0.7}>
-      <View style={[styles.avatar, { backgroundColor: color + '22' }]}>
-        <Text style={[styles.avatarText, { color }]}>{initials}</Text>
-      </View>
+      <Image 
+        source={item.avatar || item.otherPhoto ? { uri: item.avatar || item.otherPhoto } : DEFAULT_AVATAR} 
+        style={styles.avatar} 
+      />
       <View style={styles.chatInfo}>
         <View style={styles.chatTop}>
           <View style={styles.chatNameRow}>
@@ -76,8 +57,18 @@ function ChatRow({ item, onPress }) {
                 <Text style={[styles.tagText, { color: colors.isDark ? colors.primary : tag.color }]}>{tag.label}</Text>
               </View>
             )}
+            {unread > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadBadgeText}>{unread > 99 ? '99+' : unread}</Text>
+              </View>
+            )}
           </View>
-          <Text style={styles.chatTime}>{timeStr}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.chatTime}>{timeStr}</Text>
+            <TouchableOpacity onPress={() => onDelete(item)} style={{ padding: 4, marginLeft: 4 }}>
+              <Ionicons name="ellipsis-vertical" size={16} color={colors.textLight} />
+            </TouchableOpacity>
+          </View>
         </View>
         <Text style={styles.chatPreview} numberOfLines={1}>{preview}</Text>
       </View>
@@ -92,7 +83,7 @@ export default function InboxScreen() {
   const styles = getStyles(colors);
   const navigation = useNavigation();
   const myUid = getAuth().currentUser?.uid;
-  const { conversations: localConvs } = useConversations();
+  const { conversations: localConvs, deleteConversation: deleteLocalConversation } = useConversations();
 
   const [firebaseConvs, setFirebaseConvs] = useState([]);
   const [loadingFb, setLoadingFb] = useState(true);
@@ -113,8 +104,29 @@ export default function InboxScreen() {
       navigation.navigate('Chat', { personId: item.personId });
     } else {
       // Firebase real conversation
-      navigation.navigate('Chat', { conversationId: item.id, otherUid: item.otherUid, otherName: item.otherName });
+      navigation.navigate('Chat', { conversationId: item.id, otherUid: item.otherUid, otherName: item.otherName, otherPhoto: item.otherPhoto || item.avatar });
     }
+  };
+
+  const handleDelete = (item) => {
+    Alert.alert(
+      'Supprimer',
+      'Voulez-vous vraiment supprimer cette discussion ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: () => {
+            if (item.personId) {
+              deleteLocalConversation(item.personId);
+            } else {
+              deleteFirebaseConversation(item.id);
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Merge local (services) and firebase chats
@@ -164,7 +176,7 @@ export default function InboxScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <ChatRow item={item} onPress={handlePress} />}
+          renderItem={({ item }) => <ChatRow item={item} onPress={handlePress} onDelete={handleDelete} myUid={myUid} />}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -176,7 +188,7 @@ export default function InboxScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const getStyles = (colors) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -225,6 +237,14 @@ const getStyles = (colors) => StyleSheet.create({
   chatPreview: { ...FONTS.body2, color: colors.textLight },
   tagChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   tagText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+  unreadBadge: {
+    minWidth: 18, height: 18, borderRadius: 9,
+    paddingHorizontal: 5,
+    backgroundColor: colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+    marginLeft: 4,
+  },
+  unreadBadgeText: { fontSize: 10, fontWeight: '700', color: colors.white },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 100 },
   emptyText: { ...FONTS.body1, color: colors.textLight, marginTop: 10 },

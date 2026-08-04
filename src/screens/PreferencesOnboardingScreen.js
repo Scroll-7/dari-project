@@ -1,17 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 // screens/PreferencesOnboardingScreen.js
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useRef } from 'react';
-import {
-  Animated,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Animated, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getAuth } from 'firebase/auth';
 import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/auth';
@@ -417,7 +409,7 @@ export default function PreferencesOnboardingScreen({ isEditing = false, initial
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const getStyles = (colors) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
 
   topGrad: {
     paddingTop: SIZES.large,

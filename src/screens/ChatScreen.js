@@ -1,26 +1,16 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  ActivityIndicator,
-} from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Image, Alert } from 'react-native';
 import { getAuth } from 'firebase/auth';
 
 // Firebase chat utilities
-import { sendMessage as fbSend, subscribeToMessages, getOrCreateConversation } from '../firebase/chat';
+import { sendMessage as fbSend, subscribeToMessages, getOrCreateConversation, deleteMessage as fbDelete, markConversationRead } from '../firebase/chat';
 
 // Local (mock) conversation context for service providers
 import { useConversations } from '../context/ConversationContext';
 import { useTheme } from '../context/ThemeContext';
+import DEFAULT_AVATAR from '../constants/defaultAvatar';
 
 const ACCENT = '#4461F2';
 
@@ -30,20 +20,28 @@ function formatTime(ts) {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function getInitials(name = '') {
-  return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
-}
-
 // ─── Bubble ──────────────────────────────────────────────────────────────────
 
-function Bubble({ msg, myUid, isLocal }) {
+function Bubble({ msg, myUid, isLocal, onDelete }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   // In local mode, fromSelf is a boolean; in Firebase mode, compare senderId
   const self = isLocal ? msg.fromSelf : msg.senderId === myUid;
   const timeVal = isLocal ? msg.time : msg.createdAt;
+
+  const handleLongPress = () => {
+    Alert.alert("Supprimer", "Voulez-vous supprimer ce message ?", [
+      { text: "Annuler", style: "cancel" },
+      { text: "Supprimer", style: "destructive", onPress: () => onDelete(msg.id) }
+    ]);
+  };
+
   return (
-    <View style={[styles.bubbleWrap, self ? styles.bubbleWrapRight : styles.bubbleWrapLeft]}>
+    <TouchableOpacity 
+      activeOpacity={0.8}
+      onLongPress={handleLongPress}
+      style={[styles.bubbleWrap, self ? styles.bubbleWrapRight : styles.bubbleWrapLeft]}
+    >
       <View style={[styles.bubble, self ? styles.bubbleSelf : styles.bubbleOther]}>
         <Text style={[styles.bubbleText, self ? styles.bubbleTextSelf : styles.bubbleTextOther]}>
           {msg.text}
@@ -52,7 +50,7 @@ function Bubble({ msg, myUid, isLocal }) {
       <Text style={[styles.bubbleTime, self ? styles.bubbleTimeRight : styles.bubbleTimeLeft]}>
         {formatTime(timeVal)}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -66,10 +64,10 @@ export default function ChatScreen({ route, navigation }) {
   // ── LOCAL mode (service providers) ─────────────────────────────────────────
   // Triggered when navigation passes personId (from ConversationContext)
   const isLocal = !!params.personId;
-  const { conversations, sendMessage: localSend, markRead } = useConversations();
+  const { conversations, sendMessage: localSend, markRead, deleteMessage: localDelete } = useConversations();
 
   // ── FIREBASE mode (real users) ─────────────────────────────────────────────
-  const { otherUid, otherName, otherUsername } = params;
+  const { otherUid, otherName, otherUsername, otherPhoto } = params;
   const myUid = getAuth().currentUser?.uid;
 
   const [conversationId, setConversationId] = useState(null);
@@ -83,7 +81,7 @@ export default function ChatScreen({ route, navigation }) {
 
   useEffect(() => {
     if (isLocal && params.personId) markRead(params.personId);
-  }, [isLocal, params.personId]);
+  }, [isLocal, params.personId, markRead]);
 
   // ── Firebase mode setup ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -116,13 +114,19 @@ export default function ChatScreen({ route, navigation }) {
     return unsub;
   }, [isLocal, conversationId]);
 
+  // Mark the conversation as read once opened
+  useEffect(() => {
+    if (isLocal || !conversationId || !myUid) return;
+    markConversationRead(conversationId, myUid).catch(() => {});
+  }, [isLocal, conversationId, myUid]);
+
   // Scroll to bottom when local messages update
   useEffect(() => {
     if (!isLocal) return;
     if (localConv?.messages?.length) {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     }
-  }, [localConv?.messages?.length]);
+  }, [isLocal, localConv?.messages?.length]);
 
   // ── Send handler ────────────────────────────────────────────────────────────
   const handleSend = async () => {
@@ -136,6 +140,13 @@ export default function ChatScreen({ route, navigation }) {
     }
   };
 
+  const handleDeleteMessage = (messageId) => {
+    if (isLocal) {
+      localDelete(params.personId, messageId);
+    } else {
+      if (conversationId) fbDelete(conversationId, messageId);
+    }
+  };
   // ── Derived display values ──────────────────────────────────────────────────
   const displayName = isLocal
     ? (localConv?.name ?? 'Prestataire')
@@ -143,8 +154,7 @@ export default function ChatScreen({ route, navigation }) {
   const displaySub = isLocal
     ? '🔧 Service Provider'
     : (otherUsername ? `@${otherUsername}` : null);
-  const avatarColor = isLocal ? (localConv?.avatarColor ?? ACCENT) : ACCENT;
-  const initials = getInitials(displayName);
+  const avatarUri = isLocal ? localConv?.avatar : otherPhoto;
   const messages = isLocal ? (localConv?.messages ?? []) : firebaseMessages;
 
   // ── Local: handle missing conversation ─────────────────────────────────────
@@ -168,9 +178,10 @@ export default function ChatScreen({ route, navigation }) {
           <Ionicons name="arrow-back" size={22} color="#111" />
         </TouchableOpacity>
 
-        <View style={[styles.headerAvatar, { backgroundColor: avatarColor + '22' }]}>
-          <Text style={[styles.headerAvatarText, { color: avatarColor }]}>{initials}</Text>
-        </View>
+        <Image 
+          source={avatarUri ? { uri: avatarUri } : DEFAULT_AVATAR} 
+          style={styles.headerAvatar} 
+        />
 
         <View style={styles.headerInfo}>
           <Text style={styles.headerName}>{displayName}</Text>
@@ -186,21 +197,22 @@ export default function ChatScreen({ route, navigation }) {
       ) : (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          behavior="padding"
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : undefined}
         >
           <FlatList
             ref={listRef}
             data={messages}
             keyExtractor={(m) => m.id}
-            renderItem={({ item }) => <Bubble msg={item} myUid={myUid} isLocal={isLocal} />}
+            renderItem={({ item }) => <Bubble msg={item} myUid={myUid} isLocal={isLocal} onDelete={handleDeleteMessage} />}
             contentContainerStyle={styles.messagesList}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
-                <View style={[styles.emptyAvatar, { backgroundColor: avatarColor + '22' }]}>
-                  <Text style={[styles.emptyAvatarText, { color: avatarColor }]}>{initials}</Text>
-                </View>
+                <Image 
+                  source={avatarUri ? { uri: avatarUri } : DEFAULT_AVATAR} 
+                  style={styles.emptyAvatar} 
+                />
                 <Text style={styles.emptyName}>{displayName}</Text>
                 <Text style={styles.emptyHint}>Démarrez la conversation 👋</Text>
               </View>
@@ -236,7 +248,7 @@ export default function ChatScreen({ route, navigation }) {
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
 const getStyles = (colors) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   header: {

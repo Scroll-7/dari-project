@@ -1,13 +1,11 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 // screens/WelcomeUsernameScreen.js
 import React, { useState, useRef } from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  SafeAreaView, Animated, KeyboardAvoidingView, Platform, Alert, ScrollView, Modal
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Animated, KeyboardAvoidingView, Platform, ScrollView, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '../firebase/auth';
 import { FONTS, SHADOWS, SIZES } from '../constants/theme';

@@ -70,15 +70,15 @@ const DARK = {
   textInverse:'#111827',
 
   // Surfaces
-  background:  '#151525',
-  card:        '#222238',
-  cardAlt:     '#262642',
-  white:       '#222238',
-  inputBg:     '#262642',
+  background:  '#1C1C2E',
+  card:        '#2A2A44',
+  cardAlt:     '#32324D',
+  white:       '#2A2A44',
+  inputBg:     '#32324D',
 
   // Borders
-  border:  '#353554',
-  line:    '#2A2A44',
+  border:  '#424263',
+  line:    '#353554',
 
   // Status
   success: '#4ADE80',
@@ -87,18 +87,18 @@ const DARK = {
   whatsapp:'#25D366',
 
   // Glass
-  glass:       'rgba(34,34,56,0.85)',
-  glassBorder: 'rgba(99,102,241,0.25)',
+  glass:       'rgba(42,42,68,0.85)',
+  glassBorder: 'rgba(99,102,241,0.35)',
 
   // Gradients
   gradientPrimary: ['#4F46E5', '#7C3AED'],
-  gradientCard:    ['#222238', '#1E1E32'],
+  gradientCard:    ['#2A2A44', '#222238'],
   gradientGold:    ['#F59E0B', '#EF4444'],
   gradientTeal:    ['#14B8A6', '#0EA5E9'],
 
   // Tab bar
-  tabBar:       '#1A1A2C',
-  tabBarBorder: '#353554',
+  tabBar:       '#1E1E32',
+  tabBarBorder: '#2A2A44',
 
   isDark: true,
 };

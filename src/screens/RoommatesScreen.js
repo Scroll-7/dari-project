@@ -1,29 +1,30 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { getOrCreateConversation } from '../firebase/chat';
-import { FilterPill } from '../components/FilterPill';
+import { useConversations } from '../context/ConversationContext';
 import { StarRating } from '../components/StarRating';
 import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
+import DEFAULT_AVATAR from '../constants/defaultAvatar';
 
 const db = getFirestore();
+
+function CheckboxItem({ label, checked, onChange, colors }) {
+  return (
+    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }} onPress={onChange} activeOpacity={0.7}>
+      <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 1.5, borderColor: checked ? colors.primary : colors.textLight, backgroundColor: checked ? colors.primary : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+        {checked && <Ionicons name="checkmark" size={14} color="#fff" />}
+      </View>
+      <Text style={{ ...FONTS.body2, fontWeight: '500', color: colors.text, letterSpacing: 0.3 }}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -121,15 +122,6 @@ export const ROOMMATES = [
   },
 ];
 
-// ─── Avatar color helper ──────────────────────────────────────────────────────
-
-const AVATAR_PALETTE = ['#4461F2', '#E83E8C', '#20C997', '#FD7E14', '#6F42C1', '#FFC107'];
-function pickAvatarColor(name = '') {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + h * 31;
-  return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
-}
-
 // ─── Matching algorithm ───────────────────────────────────────────────────────
 
 /** Jaccard similarity as a 0–1 percentage */
@@ -186,8 +178,6 @@ function CompatRing({ score }) {
 function RoommateCard({ item, onPress, onChat }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
-  const initials = item.name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
-  const avatarColor = pickAvatarColor(item.name);
   const CardContainer = TouchableOpacity;
 
   return (
@@ -196,15 +186,12 @@ function RoommateCard({ item, onPress, onChat }) {
       onPress={onPress}
       activeOpacity={0.88}
     >
-      {/* Left: photo or initials */}
+      {/* Left: photo or fallback */}
       <View style={styles.photoWrap}>
-        {item.image ? (
-          <Image source={{ uri: item.image }} style={styles.photo} />
-        ) : (
-          <View style={[styles.photo, styles.photoInitials, { backgroundColor: avatarColor + '22' }]}>
-            <Text style={[styles.photoInitialsText, { color: avatarColor }]}>{initials}</Text>
-          </View>
-        )}
+        <Image 
+          source={item.image ? { uri: item.image } : DEFAULT_AVATAR} 
+          style={styles.photo} 
+        />
         {item.recommended && (
           <View style={styles.recDot}>
             <Ionicons name="star" size={9} color={colors.white} />
@@ -226,7 +213,7 @@ function RoommateCard({ item, onPress, onChat }) {
         <Text style={styles.role} numberOfLines={2}>
           {item.role}{item.age ? ` · ${item.age} ans` : ''}{item.city ? ` · ${item.city}` : ''}
         </Text>
-        {item.rating != null && <StarRating rating={item.rating} size={11} />}
+        {item.rating != null && <StarRating rating={item.rating} size={11} reviews={item.reviewCount || undefined} />}
         {item.budget ? (
           <Text style={styles.budgetText}>💰 {item.budget}</Text>
         ) : null}
@@ -263,7 +250,9 @@ export default function RoommatesScreen() {
   const styles = getStyles(colors);
   const navigation = useNavigation();
   const myUid = getAuth().currentUser?.uid;
-  const [filter, setFilter] = useState('all');
+  const { openOrCreateConversation } = useConversations();
+  const [showPreferences, setShowPreferences] = useState(false);
+  const [filters, setFilters] = useState({ male: false, female: false, matching: false, rating: false });
   const [realPosts, setRealPosts] = useState([]);
   const [loadingReal, setLoadingReal] = useState(true);
   const [myPrefs, setMyPrefs] = useState(null);
@@ -303,7 +292,8 @@ export default function RoommatesScreen() {
       city: p.city || '',
       compatibility: score,
       recommended: score !== null && score >= 85,
-      rating: null,
+      rating: p.rating || null,
+      reviewCount: p.reviewCount || 0,
       image: null,
       bio: p.description || '',
       budget: p.budget || '',
@@ -328,14 +318,32 @@ export default function RoommatesScreen() {
         Alert.alert('Erreur', e.message);
       }
     } else {
+      openOrCreateConversation({
+        id: `roommate_${item.id}`,
+        name: item.name,
+        tag: 'roommate',
+      });
       navigation.navigate('Chat', { personId: `roommate_${item.id}` });
     }
   };
 
-  const data =
-    filter === 'recommended' ? combined.filter((r) => r.recommended) :
-    filter === 'high_compat'  ? combined.filter((r) => r.compatibility >= 85) :
-    combined;
+  let data = combined.filter((r) => {
+    let pass = true;
+    if (filters.male || filters.female) {
+      // Mock logic since we don't have gender saved yet: Names ending in 'a' or 'e' generally mapped to female mock users
+      const isFemaleMock = r.name.toLowerCase().endsWith('a') || r.name.toLowerCase().endsWith('e');
+      if (filters.female && !filters.male && !isFemaleMock) pass = false;
+      if (filters.male && !filters.female && isFemaleMock) pass = false;
+    }
+    return pass;
+  });
+
+  if (filters.rating) {
+    data.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  }
+  if (filters.matching) {
+    data.sort((a, b) => (b.compatibility || 0) - (a.compatibility || 0));
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -352,26 +360,36 @@ export default function RoommatesScreen() {
             <Text style={styles.subtitle}>{data.length} suggestions pour vous</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.filterIconBtn} activeOpacity={0.8}>
-          <Ionicons name="options-outline" size={20} color={colors.text} />
-        </TouchableOpacity>
       </View>
 
       {/* ── Hero tip card ── */}
       <LinearGradient colors={GRADIENTS.primary} style={styles.tipBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
         <Ionicons name="information-circle-outline" size={20} color="rgba(255,255,255,0.9)" />
         <Text style={styles.tipText}>
-          Notre algorithme analyse la compatibilité selon vos habitudes, budget et centres d'intérêt.
+          Notre algorithme analyse la compatibilité selon vos habitudes, budget et centres d’intérêt.
         </Text>
       </LinearGradient>
 
-      {/* ── Filter pills ── */}
-      <View style={styles.filterRowWrap}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: SIZES.medium }}>
-          <FilterPill label="Tous"           active={filter === 'all'}         onPress={() => setFilter('all')} />
-          <FilterPill label="⭐ Recommandés" active={filter === 'recommended'} onPress={() => setFilter('recommended')} />
-          <FilterPill label="🔥 > 85%"       active={filter === 'high_compat'} onPress={() => setFilter('high_compat')} />
-        </ScrollView>
+      {/* ── Preferences Dropdown ── */}
+      <View style={{ paddingHorizontal: SIZES.medium, marginBottom: SIZES.small, zIndex: 10 }}>
+        <TouchableOpacity 
+          style={styles.prefBtn}
+          onPress={() => setShowPreferences(!showPreferences)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="options-outline" size={18} color={colors.primary} />
+          <Text style={styles.prefBtnText}>Préférences</Text>
+          <Ionicons name={showPreferences ? "chevron-up" : "chevron-down"} size={16} color={colors.primary} style={{ marginLeft: 'auto' }} />
+        </TouchableOpacity>
+
+        {showPreferences && (
+          <View style={styles.dropdownBox}>
+            <CheckboxItem label="Homme" checked={filters.male} onChange={() => setFilters({...filters, male: !filters.male})} colors={colors} />
+            <CheckboxItem label="Femme" checked={filters.female} onChange={() => setFilters({...filters, female: !filters.female})} colors={colors} />
+            <CheckboxItem label="Selon le matching" checked={filters.matching} onChange={() => setFilters({...filters, matching: !filters.matching})} colors={colors} />
+            <CheckboxItem label="Selon le rating" checked={filters.rating} onChange={() => setFilters({...filters, rating: !filters.rating})} colors={colors} />
+          </View>
+        )}
       </View>
 
       {/* ── List ── */}
@@ -399,7 +417,7 @@ export default function RoommatesScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const getStyles = (colors) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
 
   // Header
   header: {
@@ -428,7 +446,10 @@ const getStyles = (colors) => StyleSheet.create({
   },
   tipText: { flex: 1, fontSize: 11, color: 'rgba(255,255,255,0.9)', lineHeight: 16 },
 
-  filterRowWrap: { paddingVertical: 6, marginBottom: SIZES.small },
+  prefBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 12, borderRadius: SIZES.radius.lg, borderWidth: 1, borderColor: colors.line, gap: 8 },
+  prefBtnText: { ...FONTS.h3, color: colors.text },
+  dropdownBox: { backgroundColor: colors.card, marginTop: 8, borderRadius: SIZES.radius.lg, padding: 12, borderWidth: 1, borderColor: colors.line, ...SHADOWS.medium },
+
   list: { paddingHorizontal: SIZES.medium, paddingBottom: 100 },
 
   card: {

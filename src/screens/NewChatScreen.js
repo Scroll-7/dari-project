@@ -1,18 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { getAuth } from 'firebase/auth';
-import { getAllUsers, searchUsersByUsername, getOrCreateConversation } from '../firebase/chat';
+import { getAllUsers, getOrCreateConversation } from '../firebase/chat';
 import { useTheme } from '../context/ThemeContext';
 
 const ACCENT = '#4461F2';
@@ -155,7 +146,7 @@ export default function NewChatScreen({ navigation }) {
 }
 
 const getStyles = (colors) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
   loadingText: { fontSize: 14, color: '#aaa', marginTop: 8 },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: '#555', marginTop: 8 },

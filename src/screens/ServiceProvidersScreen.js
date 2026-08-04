@@ -1,22 +1,15 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/auth';
-import {
-  Alert,
-  Linking,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, Linking, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { FONTS, SHADOWS, SIZES } from '../constants/theme';
 import { useConversations } from '../context/ConversationContext';
 import { useTheme } from '../context/ThemeContext';
+import { getAuth } from 'firebase/auth';
+import { getOrCreateConversation } from '../firebase/chat';
 
 // ──────────────────────────────────────────────
 // Mock provider data per service category
@@ -25,31 +18,31 @@ const PROVIDERS_DATA = {
   Plumbing: [
     {
       id: '1', name: 'Karim Benali', initials: 'KB', avatarColor: '#4461F2',
-      rating: 4.8, reviews: 124, price: '500 – 1 500 DT/h',
+      rating: 4.8, reviews: 124, price: '30 – 100 DT',
       phone: '+213 555 123 456', experience: '8 ans', available: true,
       specialty: 'Réparations urgentes, tuyauterie',
     },
     {
       id: '2', name: 'Youcef Aïdouni', initials: 'YA', avatarColor: '#E83E8C',
-      rating: 4.6, reviews: 89, price: '600 – 1 800 DT/h',
+      rating: 4.6, reviews: 89, price: '40 – 80 DT',
       phone: '+213 661 234 567', experience: '12 ans', available: true,
       specialty: 'Installations sanitaires',
     },
     {
       id: '3', name: 'Abdelkader Mansouri', initials: 'AM', avatarColor: '#20C997',
-      rating: 4.5, reviews: 67, price: '450 – 1 200 DT/h',
+      rating: 4.5, reviews: 67, price: '35 – 70 DT',
       phone: '+213 770 345 678', experience: '5 ans', available: false,
       specialty: 'Chauffe-eau, robinetterie',
     },
     {
       id: '4', name: 'Sofiane Khelil', initials: 'SK', avatarColor: '#FD7E14',
-      rating: 4.9, reviews: 203, price: '800 – 2 000 DT/h',
+      rating: 4.9, reviews: 203, price: '50 – 100 DT',
       phone: '+213 699 456 789', experience: '15 ans', available: true,
       specialty: 'Plomberie générale & urgences',
     },
     {
       id: '5', name: 'Nassim Ouali', initials: 'NO', avatarColor: '#6F42C1',
-      rating: 4.3, reviews: 45, price: '400 – 1 000 DT/h',
+      rating: 4.3, reviews: 45, price: '30 – 60 DT',
       phone: '+213 556 567 890', experience: '3 ans', available: true,
       specialty: 'Réparations fuites & joints',
     },
@@ -57,25 +50,25 @@ const PROVIDERS_DATA = {
   Electrician: [
     {
       id: '1', name: 'Rachid Touati', initials: 'RT', avatarColor: '#FFC107',
-      rating: 4.9, reviews: 187, price: '700 – 2 000 DT/h',
+      rating: 4.9, reviews: 187, price: '40 – 90 DT',
       phone: '+213 661 111 222', experience: '10 ans', available: true,
       specialty: 'Tableaux électriques, câblage',
     },
     {
       id: '2', name: 'Bilal Hamdani', initials: 'BH', avatarColor: '#4461F2',
-      rating: 4.7, reviews: 134, price: '600 – 1 800 DT/h',
+      rating: 4.7, reviews: 134, price: '35 – 80 DT',
       phone: '+213 770 222 333', experience: '7 ans', available: true,
       specialty: 'Domotique, éclairage LED',
     },
     {
       id: '3', name: 'Omar Zerrouki', initials: 'OZ', avatarColor: '#E83E8C',
-      rating: 4.5, reviews: 78, price: '500 – 1 500 DT/h',
+      rating: 4.5, reviews: 78, price: '30 – 75 DT',
       phone: '+213 555 333 444', experience: '6 ans', available: false,
       specialty: 'Prises, interrupteurs',
     },
     {
       id: '4', name: 'Hamza Bouzid', initials: 'HB', avatarColor: '#20C997',
-      rating: 4.8, reviews: 156, price: '650 – 1 900 DT/h',
+      rating: 4.8, reviews: 156, price: '40 – 90 DT',
       phone: '+213 699 444 555', experience: '9 ans', available: true,
       specialty: 'Climatisation, courant fort/faible',
     },
@@ -83,31 +76,31 @@ const PROVIDERS_DATA = {
   Cleaning: [
     {
       id: '1', name: 'Amira Sahraoui', initials: 'AS', avatarColor: '#20C997',
-      rating: 4.9, reviews: 312, price: '1 500 – 4 000 DT/séance',
+      rating: 4.9, reviews: 312, price: '50 – 100 DT',
       phone: '+213 555 777 888', experience: '6 ans', available: true,
       specialty: 'Nettoyage appartements & bureaux',
     },
     {
       id: '2', name: 'Nadia Chérif', initials: 'NC', avatarColor: '#E83E8C',
-      rating: 4.8, reviews: 201, price: '2 000 – 5 000 DT/séance',
+      rating: 4.8, reviews: 201, price: '60 – 100 DT',
       phone: '+213 661 888 999', experience: '8 ans', available: true,
       specialty: 'Nettoyage en profondeur',
     },
     {
       id: '3', name: 'Lynda Brahim', initials: 'LB', avatarColor: '#4461F2',
-      rating: 4.7, reviews: 148, price: '1 200 – 3 500 DT/séance',
+      rating: 4.7, reviews: 148, price: '40 – 90 DT',
       phone: '+213 770 999 000', experience: '4 ans', available: true,
       specialty: 'Entretien régulier & vitreries',
     },
     {
       id: '4', name: 'Farida Meziani', initials: 'FM', avatarColor: '#FD7E14',
-      rating: 4.5, reviews: 95, price: '1 000 – 3 000 DT/séance',
+      rating: 4.5, reviews: 95, price: '30 – 80 DT',
       phone: '+213 699 000 111', experience: '3 ans', available: false,
       specialty: 'Tapis, rideaux, désinfection',
     },
     {
       id: '5', name: 'Sonia Bensalem', initials: 'SB', avatarColor: '#6F42C1',
-      rating: 4.6, reviews: 120, price: '1 300 – 3 800 DT/séance',
+      rating: 4.6, reviews: 120, price: '45 – 95 DT',
       phone: '+213 556 111 222', experience: '5 ans', available: true,
       specialty: 'Post-travaux, locaux commerciaux',
     },
@@ -115,25 +108,25 @@ const PROVIDERS_DATA = {
   Moving: [
     {
       id: '1', name: 'Amine Kebir', initials: 'AK', avatarColor: '#FD7E14',
-      rating: 4.7, reviews: 89, price: '5 000 – 15 000 DT/déménag.',
+      rating: 4.7, reviews: 89, price: '50 – 100 DT',
       phone: '+213 555 444 333', experience: '10 ans', available: true,
       specialty: 'Déménagement local & longue distance',
     },
     {
       id: '2', name: 'Walid Ferroukhi', initials: 'WF', avatarColor: '#4461F2',
-      rating: 4.5, reviews: 64, price: '4 000 – 12 000 DT/déménag.',
+      rating: 4.5, reviews: 64, price: '40 – 90 DT',
       phone: '+213 661 555 444', experience: '7 ans', available: true,
       specialty: 'Emballage professionnel, montage meubles',
     },
     {
       id: '3', name: 'Samir Boudali', initials: 'SB', avatarColor: '#20C997',
-      rating: 4.6, reviews: 77, price: '6 000 – 18 000 DT/déménag.',
+      rating: 4.6, reviews: 77, price: '60 – 100 DT',
       phone: '+213 770 666 555', experience: '12 ans', available: false,
       specialty: 'Camion 20m³, équipe de 4',
     },
     {
       id: '4', name: 'Djamel Latrèche', initials: 'DL', avatarColor: '#E83E8C',
-      rating: 4.4, reviews: 43, price: '3 500 – 10 000 DT/déménag.',
+      rating: 4.4, reviews: 43, price: '30 – 80 DT',
       phone: '+213 699 777 666', experience: '5 ans', available: true,
       specialty: 'Mini-déménagements & livraisons',
     },
@@ -141,19 +134,19 @@ const PROVIDERS_DATA = {
   Painting: [
     {
       id: '1', name: 'Mourad Attar', initials: 'MA', avatarColor: '#6F42C1',
-      rating: 4.9, reviews: 156, price: '800 – 2 500 DT/m²',
+      rating: 4.9, reviews: 156, price: '40 – 100 DT',
       phone: '+213 555 888 777', experience: '14 ans', available: true,
       specialty: 'Peinture décorative, enduit',
     },
     {
       id: '2', name: 'Farid Azzoug', initials: 'FA', avatarColor: '#FD7E14',
-      rating: 4.7, reviews: 98, price: '700 – 2 000 DT/m²',
+      rating: 4.7, reviews: 98, price: '35 – 90 DT',
       phone: '+213 661 999 888', experience: '9 ans', available: true,
       specialty: 'Façades, intérieur & extérieur',
     },
     {
       id: '3', name: 'Hichem Maamri', initials: 'HM', avatarColor: '#4461F2',
-      rating: 4.6, reviews: 72, price: '600 – 1 800 DT/m²',
+      rating: 4.6, reviews: 72, price: '30 – 80 DT',
       phone: '+213 770 000 999', experience: '6 ans', available: false,
       specialty: 'Peinture appartement, ragréage',
     },
@@ -161,19 +154,19 @@ const PROVIDERS_DATA = {
   Carpentry: [
     {
       id: '1', name: 'Tahar Bensaid', initials: 'TB', avatarColor: '#FD7E14',
-      rating: 4.9, reviews: 88, price: '1 000 – 3 500 DT/h',
+      rating: 4.9, reviews: 88, price: '40 – 100 DT',
       phone: '+213 555 222 111', experience: '18 ans', available: true,
       specialty: 'Menuiserie bois, portes sur mesure',
     },
     {
       id: '2', name: 'Lyes Dahlab', initials: 'LD', avatarColor: '#20C997',
-      rating: 4.7, reviews: 61, price: '900 – 3 000 DT/h',
+      rating: 4.7, reviews: 61, price: '35 – 90 DT',
       phone: '+213 661 333 222', experience: '11 ans', available: true,
       specialty: 'Placards, cuisines équipées',
     },
     {
       id: '3', name: 'Nacer Guechi', initials: 'NG', avatarColor: '#E83E8C',
-      rating: 4.5, reviews: 39, price: '800 – 2 500 DT/h',
+      rating: 4.5, reviews: 39, price: '30 – 80 DT',
       phone: '+213 770 444 333', experience: '7 ans', available: false,
       specialty: 'Parquet, lambris, plafonds',
     },
@@ -205,12 +198,36 @@ function StarRating({ rating }) {
 // ──────────────────────────────────────────────
 // Provider card
 // ──────────────────────────────────────────────
-function ProviderCard({ provider, navigation }) {
+function ProviderCard({ provider, navigation, category }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const { openOrCreateConversation } = useConversations();
 
-  const handleChat = () => {
+  const handlePress = () => {
+    navigation.navigate('ServiceProviderProfile', { provider, category });
+  };
+
+  const handleChat = async () => {
+    // Real registered service provider → persistent Firestore conversation
+    if (provider.isReal && provider.uid) {
+      const myUid = getAuth().currentUser?.uid;
+      if (myUid && myUid !== provider.uid) {
+        try {
+          const conversationId = await getOrCreateConversation(myUid, provider.uid);
+          navigation.navigate('Chat', {
+            conversationId,
+            otherUid: provider.uid,
+            otherName: provider.name,
+            otherPhoto: null,
+            otherUsername: '',
+          });
+          return;
+        } catch (e) {
+          console.warn('Chat init error:', e);
+        }
+      }
+    }
+    // Mock provider (no user account) → local fallback
     openOrCreateConversation({
       id: `service_${provider.id}_${provider.name}`,
       name: provider.name,
@@ -244,6 +261,7 @@ function ProviderCard({ provider, navigation }) {
   };
 
   return (
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.85}>
     <View style={styles.card}>
       {/* Top row: avatar + info */}
       <View style={styles.cardTop}>
@@ -270,7 +288,7 @@ function ProviderCard({ provider, navigation }) {
 
           <View style={styles.tagRow}>
             <Ionicons name="time-outline" size={13} color={colors.textLight} />
-            <Text style={styles.tagText}>{provider.experience} d'exp.</Text>
+            <Text style={styles.tagText}>{provider.experience} d’exp.</Text>
           </View>
 
           <Text style={styles.specialty} numberOfLines={2}>{provider.specialty}</Text>
@@ -306,6 +324,7 @@ function ProviderCard({ provider, navigation }) {
         </View>
       </View>
     </View>
+    </TouchableOpacity>
   );
 }
 
@@ -343,6 +362,7 @@ export default function ServiceProvidersScreen({ route, navigation }) {
           const avatarColor = AVATAR_COLORS[d.id.charCodeAt(0) % AVATAR_COLORS.length];
           return {
             id: `real_${d.id}`,
+            uid: d.id,
             name: fullName,
             initials,
             avatarColor,
@@ -419,7 +439,7 @@ export default function ServiceProvidersScreen({ route, navigation }) {
       <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         {/* Banner when real providers exist */}
         {sorted.map((provider) => (
-          <ProviderCard key={provider.id} provider={provider} navigation={navigation} />
+          <ProviderCard key={provider.id} provider={provider} navigation={navigation} category={service.title} />
         ))}
       </ScrollView>
     </SafeAreaView>

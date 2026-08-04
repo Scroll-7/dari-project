@@ -1,8 +1,6 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
-import { 
-  View, Text, StyleSheet, SafeAreaView, TouchableOpacity, 
-  FlatList, ActivityIndicator, Alert 
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, collection, query, where, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
@@ -137,7 +135,7 @@ export default function MyListingsScreen({ navigation }) {
 }
 
 const getStyles = (colors) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
   header: { 
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', 
     padding: 16, backgroundColor: colors.card, borderBottomWidth: 1, borderColor: colors.line 

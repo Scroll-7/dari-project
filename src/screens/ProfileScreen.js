@@ -1,40 +1,30 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useEffect } from 'react';
-import {
-  Alert,
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, Image, Modal, ScrollView, StatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { getAuth } from 'firebase/auth';
-import { doc, updateDoc, collection, getCountFromServer } from 'firebase/firestore';
+import { doc, updateDoc, collection, getCountFromServer, query, where, onSnapshot, getFirestore } from 'firebase/firestore';
 import { db } from '../firebase/auth';
 import { useTheme } from '../context/ThemeContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useUser } from '../context/UserContext';
 import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import DEFAULT_AVATAR from '../constants/defaultAvatar';
 import { PROPERTIES } from '../constants/mockData';
 
 // ─── Static config ────────────────────────────────────────────────────────────
 
-const getMenu = (colors) => [
+const getMenu = (colors, hasPost) => [
+  hasPost ? { icon: 'person-circle-outline', label: 'Mon Profil Colocataire', screen: 'MyRoommateProfile', color: colors.primary } : null,
   { icon: 'options-outline',        label: 'Mes Préférences',   screen: 'EditPreferences', color: colors.primary },
   { icon: 'heart-outline',          label: 'Saved Properties',  screen: 'SavedProperties', color: colors.rose },
   { icon: 'document-text-outline',  label: 'My Listings',       screen: 'MyListings',      color: colors.primary },
   { icon: 'bar-chart-outline',      label: 'Market Insights',   screen: 'MarketInsights',  color: colors.teal },
   { icon: 'help-circle-outline',    label: 'Help & Support',    screen: 'Help',            color: colors.gold },
   { icon: 'log-out-outline',        label: 'Log Out',           screen: null,              color: colors.error },
-];
+].filter(Boolean);
 
 const BADGES = [
   { icon: 'checkmark-circle', label: 'Vérifié',    color: '#22C55E', bg: '#F0FDF4' },
@@ -52,6 +42,7 @@ export default function ProfileScreen({ navigation }) {
   const [editName, setEditName] = useState(user?.name ?? '');
   const [editCity, setEditCity] = useState(user?.city ?? '');
   const [reviewCount, setReviewCount] = useState(0);
+  const [myRoommatePost, setMyRoommatePost] = useState(null);
 
   useEffect(() => {
     const uid = getAuth().currentUser?.uid;
@@ -59,10 +50,23 @@ export default function ProfileScreen({ navigation }) {
     getCountFromServer(collection(db, 'users', uid, 'comments'))
       .then((snap) => setReviewCount(snap.data().count))
       .catch(() => {});
+
+    // Fetch own roommate post
+    const fsdb = getFirestore();
+    const unsubPost = onSnapshot(query(collection(fsdb, 'roommatePosts'), where('uid', '==', uid)), (snap) => {
+      if (!snap.empty) {
+        const d = snap.docs[0];
+        setMyRoommatePost({ firestoreId: d.id, ...d.data() });
+      } else {
+        setMyRoommatePost(null);
+      }
+    });
+
+    return () => unsubPost();
   }, []);
 
   const styles = React.useMemo(() => getStyles(colors), [colors]);
-  const menuList = React.useMemo(() => getMenu(colors), [colors]);
+  const menuList = React.useMemo(() => getMenu(colors, !!myRoommatePost), [colors, myRoommatePost]);
 
   const savedCount    = getFavoriteIds().length;
   const listingsCount = PROPERTIES.filter((p) => p.featured).length;
@@ -105,6 +109,32 @@ export default function ProfileScreen({ navigation }) {
       ]);
       return;
     }
+    if (item.screen === 'MyRoommateProfile' && myRoommatePost) {
+      const uid = getAuth().currentUser?.uid;
+      navigation.navigate('RoommateProfile', {
+        roommate: {
+          id: `real_${myRoommatePost.firestoreId}`,
+          uid,
+          name: myRoommatePost.name || user?.name || 'Moi',
+          username: myRoommatePost.username || user?.username || '',
+          role: myRoommatePost.description?.slice(0, 50) || 'Cherche colocation',
+          age: myRoommatePost.age || user?.age || null,
+          city: myRoommatePost.city || user?.city || 'Tunis',
+          compatibility: null,
+          recommended: false,
+          rating: myRoommatePost.rating || null,
+          reviewCount: myRoommatePost.reviewCount || 0,
+          image: user?.photo || null,
+          bio: myRoommatePost.description || '',
+          budget: myRoommatePost.budget || '',
+          interests: myRoommatePost.interests || [],
+          habits: myRoommatePost.habits || [],
+          experiences: [],
+          isReal: true,
+        },
+      });
+      return;
+    }
     navigation.navigate(item.screen);
   };
 
@@ -128,15 +158,10 @@ export default function ProfileScreen({ navigation }) {
         {/* ── Profile card ── */}
         <View style={styles.profileCard}>
           <TouchableOpacity onPress={pickImage} activeOpacity={0.8} style={styles.avatarContainer}>
-            {user?.photo ? (
-              <Image source={{ uri: user.photo }} style={styles.avatarImg} />
-            ) : (
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitials}>
-                  {(user?.name ?? 'U').charAt(0).toUpperCase()}
-                </Text>
-              </View>
-            )}
+            <Image
+              source={user?.photo ? { uri: user.photo } : DEFAULT_AVATAR}
+              style={styles.avatarImg}
+            />
             <View style={styles.editAvatarBadge}>
               <Ionicons name="camera" size={14} color="#fff" />
             </View>
@@ -258,7 +283,7 @@ export default function ProfileScreen({ navigation }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const getStyles = (colors) => StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
   scroll:  { paddingBottom: 40 },
 
   // Gradient header

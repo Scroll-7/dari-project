@@ -1,8 +1,16 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 // ─── Context ────────────────────────────────────────────────────────────────
+// NOTE: This context ONLY backs conversations with placeholder/mock entities
+// that have no real Firebase user account (mock service providers, mock
+// roommates, mock property owners). All real user-to-user chat is handled by
+// src/firebase/chat.js against Firestore. Conversations here are persisted
+// locally so they survive app restarts.
 
 const ConversationContext = createContext(null);
+
+const STORAGE_KEY = '@dari_mock_conversations';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -33,6 +41,32 @@ function pickColor(name = '') {
 
 export function ConversationProvider({ children }) {
   const [conversations, setConversations] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const loadedRef = useRef(false);
+
+  // Load persisted mock conversations on mount
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) setConversations(parsed);
+          } catch (_) {}
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        loadedRef.current = true;
+        setLoaded(true);
+      });
+  }, []);
+
+  // Persist whenever conversations change (after initial load)
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(conversations)).catch(() => {});
+  }, [conversations, loaded]);
 
   /**
    * Returns an existing conversation id for the given person, or creates one.
@@ -50,6 +84,7 @@ export function ConversationProvider({ children }) {
         id: makeId(),
         personId: person.id,
         name: person.name,
+        avatar: person.avatar || null,
         initials: parseInitials(person.name),
         avatarColor: color,
         bgColor: color + '22',
@@ -64,10 +99,8 @@ export function ConversationProvider({ children }) {
       return [newConv, ...prev];
     });
 
-    // If existing was already found before setState call, return its id
-    // Otherwise we need to grab it after state update — we'll just return person.id
-    // and look up by personId in the Inbox.
-    return person.id; // used as personId to find the conv
+    // Return the personId used to look up the conversation later.
+    return person.id;
   }, []);
 
   /**
@@ -105,9 +138,32 @@ export function ConversationProvider({ children }) {
     );
   }, []);
 
+  /**
+   * Delete a local conversation
+   */
+  const deleteConversation = useCallback((personId) => {
+    setConversations((prev) => prev.filter((c) => c.personId !== personId));
+  }, []);
+
+  const deleteMessage = useCallback((personId, messageId) => {
+    setConversations((prev) =>
+      prev.map((conv) => {
+        if (conv.personId !== personId) return conv;
+        const newMessages = conv.messages.filter(m => m.id !== messageId);
+        const lastMsg = newMessages.length > 0 ? newMessages[newMessages.length - 1] : { text: '', time: conv.lastTime, fromSelf: false };
+        return {
+          ...conv,
+          messages: newMessages,
+          lastMessage: lastMsg.fromSelf ? `You: ${lastMsg.text}` : lastMsg.text,
+          lastTime: lastMsg.time,
+        };
+      })
+    );
+  }, []);
+
   return (
     <ConversationContext.Provider
-      value={{ conversations, openOrCreateConversation, sendMessage, markRead }}
+      value={{ conversations, openOrCreateConversation, sendMessage, markRead, deleteConversation, deleteMessage }}
     >
       {children}
     </ConversationContext.Provider>

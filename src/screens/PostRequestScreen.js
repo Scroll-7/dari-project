@@ -1,9 +1,6 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
-import {
-  View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  TextInput, Image, ScrollView, KeyboardAvoidingView, Platform,
-  Alert, ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { getAuth } from 'firebase/auth';
@@ -11,8 +8,9 @@ import {
   getFirestore, collection, addDoc, serverTimestamp, doc, updateDoc, getDoc
 } from 'firebase/firestore';
 import { useUser } from '../context/UserContext';
-import { FONTS, SIZES, SHADOWS } from '../constants/theme';
+import { FONTS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
+import DEFAULT_AVATAR from '../constants/defaultAvatar';
 
 const db = getFirestore();
 
@@ -90,8 +88,6 @@ export default function PostRequestScreen({ route, navigation }) {
     }
   };
 
-  const initials = (user?.name || user?.username || 'U').charAt(0).toUpperCase();
-
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -116,13 +112,10 @@ export default function PostRequestScreen({ route, navigation }) {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* User info row */}
           <View style={styles.userInfo}>
-            {user?.photo ? (
-              <Image source={{ uri: user.photo }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarInitial}>{initials}</Text>
-              </View>
-            )}
+            <Image
+              source={user?.photo ? { uri: user.photo } : DEFAULT_AVATAR}
+              style={styles.avatar}
+            />
             <View>
               <Text style={styles.userName}>{user?.name || user?.username || 'Chercheur'}</Text>
               <View style={styles.privacyPill}>

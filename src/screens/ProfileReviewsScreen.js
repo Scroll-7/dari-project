@@ -1,18 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 // screens/ProfileReviewsScreen.js
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, FlatList, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getAuth } from 'firebase/auth';
 import {
   collection,
@@ -24,9 +15,7 @@ import {
   query,
 } from 'firebase/firestore';
 import { useTheme } from '../context/ThemeContext';
-import { useUser } from '../context/UserContext';
-import { FONTS, SHADOWS, SIZES } from '../constants/theme';
-import { GRADIENTS } from '../constants/theme';
+import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
 
 // ─── Star row ───────────────────────────────────────────────────────────────
 function Stars({ count = 0 }) {
@@ -95,7 +84,6 @@ function ReviewCard({ item, currentUid, onDelete, colors }) {
 export default function ProfileReviewsScreen({ navigation }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
-  const { user } = useUser();
   const auth = getAuth();
   const db = getFirestore();
   const currentUser = auth.currentUser;
@@ -118,7 +106,7 @@ export default function ProfileReviewsScreen({ navigation }) {
     });
 
     return unsub;
-  }, [currentUser]);
+  }, [currentUser, db]);
 
   const handleDelete = (commentId) => {
     Alert.alert(
@@ -134,7 +122,7 @@ export default function ProfileReviewsScreen({ navigation }) {
               await deleteDoc(
                 doc(db, 'users', currentUser.uid, 'comments', commentId)
               );
-            } catch (e) {
+            } catch (_) {
               Alert.alert('Erreur', 'Impossible de supprimer ce commentaire.');
             }
           },
@@ -180,9 +168,9 @@ export default function ProfileReviewsScreen({ navigation }) {
       ) : reviews.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="chatbubbles-outline" size={72} color={colors.line} />
-          <Text style={styles.emptyTitle}>Aucun avis pour l'instant</Text>
+          <Text style={styles.emptyTitle}>Aucun avis pour l’instant</Text>
           <Text style={styles.emptySubtitle}>
-            Les commentaires que d'autres utilisateurs laissent sur votre profil apparaîtront ici.
+            Les commentaires que d’autres utilisateurs laissent sur votre profil apparaîtront ici.
           </Text>
         </View>
       ) : (
@@ -208,7 +196,7 @@ export default function ProfileReviewsScreen({ navigation }) {
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const getStyles = (colors) =>
   StyleSheet.create({
-    safe: { flex: 1, backgroundColor: colors.background },
+    safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
 
     header: {
       flexDirection: 'row',
