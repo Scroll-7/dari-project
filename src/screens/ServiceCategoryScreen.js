@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 // screens/ServiceCategoryScreen.js
 // Shown only to users whose role === 'service', right after WelcomeUsernameScreen.
 // Lets them pick which service category they belong to so they appear in the
@@ -6,20 +7,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import {
-  Animated,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Animated, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getAuth } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/auth';
-import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
+import { GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 
 // ─── Categories (must match the keys used in ServiceProvidersScreen) ──────────
@@ -72,7 +64,6 @@ export const SERVICE_CATEGORIES = [
 // ─── Category card ─────────────────────────────────────────────────────────────
 
 function CategoryCard({ item, selected, onPress }) {
-  const { colors } = useTheme();
   const scale = React.useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () =>

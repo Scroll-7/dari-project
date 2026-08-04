@@ -1,16 +1,8 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback } from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Animated,
-} from 'react-native';
+import { ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
@@ -123,7 +115,7 @@ export default function ServicesScreen() {
         <LinearGradient colors={GRADIENTS.gold} style={styles.emergencyBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
           <Ionicons name="warning-outline" size={22} color={colors.white} />
           <View style={styles.emergencyText}>
-            <Text style={styles.emergencyTitle}>Services d'urgence 24/7</Text>
+            <Text style={styles.emergencyTitle}>Services d’urgence 24/7</Text>
             <Text style={styles.emergencySub}>Plombier · Électricien disponible maintenant</Text>
           </View>
           <TouchableOpacity style={styles.emergencyBtn}>
@@ -164,7 +156,7 @@ export default function ServicesScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const getStyles = (colors) => StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
   scroll: { paddingBottom: 110 },
 
   header: {

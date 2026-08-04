@@ -1,15 +1,14 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  TextInput, Image, ScrollView, KeyboardAvoidingView, Platform
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { getFirestore, collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useUser } from '../context/UserContext';
-import { FONTS, SIZES, SHADOWS } from '../constants/theme';
+import { FONTS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
+import DEFAULT_AVATAR from '../constants/defaultAvatar';
 
 export default function PostPropertyScreen({ navigation, route }) {
   const { colors } = useTheme();
@@ -102,7 +101,7 @@ export default function PostPropertyScreen({ navigation, route }) {
         uid: getAuth().currentUser?.uid,
         agent: {
           name: user?.name || user?.username || 'Propriétaire',
-          image: user?.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200',
+          image: user?.photo || null,
         }
       };
 
@@ -141,13 +140,10 @@ export default function PostPropertyScreen({ navigation, route }) {
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.userInfo}>
-            {user?.photo ? (
-              <Image source={{ uri: user.photo }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarInitial}>{(user?.name || 'P').charAt(0).toUpperCase()}</Text>
-              </View>
-            )}
+            <Image
+              source={user?.photo ? { uri: user.photo } : DEFAULT_AVATAR}
+              style={styles.avatar}
+            />
             <View>
               <Text style={styles.userName}>{user?.name || 'Propriétaire'}</Text>
               <View style={styles.privacyPill}>

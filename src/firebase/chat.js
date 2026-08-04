@@ -12,7 +12,8 @@ import {
   orderBy,
   where,
   serverTimestamp,
-  arrayUnion,
+  increment,
+  deleteDoc,
 } from 'firebase/firestore';
 
 const db = getFirestore();
@@ -51,12 +52,31 @@ export async function sendMessage(conversationId, senderUid, text) {
     createdAt: serverTimestamp(),
   });
 
-  // Update conversation metadata
-  await updateDoc(doc(db, 'conversations', conversationId), {
+  // Update conversation metadata + bump unread count for the other participant
+  const convSnap = await getDoc(doc(db, 'conversations', conversationId));
+  const participants = convSnap.exists() ? (convSnap.data().participants ?? []) : [];
+  const otherUid = participants.find((p) => p !== senderUid);
+
+  const updates = {
     lastMessage: text,
     lastSenderId: senderUid,
     lastTime: serverTimestamp(),
+  };
+  if (otherUid) updates[`unreadCounts.${otherUid}`] = increment(1);
+
+  await updateDoc(doc(db, 'conversations', conversationId), updates);
+}
+
+// ─── Mark a conversation as read for a user ───────────────────────────────────
+export async function markConversationRead(conversationId, uid) {
+  await updateDoc(doc(db, 'conversations', conversationId), {
+    [`unreadCounts.${uid}`]: 0,
   });
+}
+
+// ─── Delete a conversation ────────────────────────────────────────────────────
+export async function deleteConversation(conversationId) {
+  await deleteDoc(doc(db, 'conversations', conversationId));
 }
 
 // ─── Subscribe to messages in a conversation (real-time) ─────────────────────
@@ -94,8 +114,11 @@ export function subscribeToConversations(uid, callback) {
           otherUid,
           otherName: otherUser.fullName || otherUser.username || 'Utilisateur',
           otherUsername: otherUser.username || '',
+          otherPhoto: otherUser.avatarUrl || null,
           lastMessage: data.lastMessage || '',
+          lastSenderId: data.lastSenderId || '',
           lastTime: data.lastTime?.toDate?.() ?? null,
+          unreadCounts: data.unreadCounts || {},
           participants: data.participants,
         };
       })
@@ -124,4 +147,8 @@ export async function getAllUsers(excludeUid) {
   return snap.docs
     .map((d) => ({ uid: d.id, ...d.data() }))
     .filter((u) => u.uid !== excludeUid);
+}
+// ─── Delete a specific message ───────────────────────────────────────────────────
+export async function deleteMessage(conversationId, messageId) {
+  await deleteDoc(doc(db, 'conversations', conversationId, 'messages', messageId));
 }

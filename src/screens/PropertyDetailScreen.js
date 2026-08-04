@@ -1,24 +1,15 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback } from 'react';
-import {
-  Image,
-  Linking,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Alert,
-  Share,
-} from 'react-native';
+import { Image, Linking, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, Alert, Share } from 'react-native';
 import { useFavorites } from '../context/FavoritesContext';
 import { useConversations } from '../context/ConversationContext';
-import { StarRating } from '../components/StarRating';
+import { getAuth } from 'firebase/auth';
+import { getOrCreateConversation } from '../firebase/chat';
 import { FONTS, GRADIENTS, SHADOWS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
+import DEFAULT_AVATAR from '../constants/defaultAvatar';
 
 // ─── Mock extensions ──────────────────────────────────────────────────────────
 
@@ -66,13 +57,32 @@ export default function PropertyDetailScreen({ route, navigation }) {
   const saved = isFavorite(property.id);
 
   const handleCall = useCallback(() => {
-    const url = `tel:${AGENT.phone.replace(/\s/g, '')}`;
+    const phone = property.agent?.phone || '00000000';
+    const url = `tel:${phone.replace(/\s/g, '')}`;
     Linking.canOpenURL(url)
       .then((ok) => ok && Linking.openURL(url))
       .catch(() => Alert.alert('Erreur', "Impossible d'effectuer l'appel."));
-  }, []);
+  }, [property.agent?.phone]);
 
-  const handleChat = useCallback(() => {
+  const handleChat = useCallback(async () => {
+    const myUid = getAuth().currentUser?.uid;
+    // Real property posted by a real user → persistent Firestore conversation
+    if (property.uid && myUid && property.uid !== myUid) {
+      try {
+        const conversationId = await getOrCreateConversation(myUid, property.uid);
+        navigation.navigate('Chat', {
+          conversationId,
+          otherUid: property.uid,
+          otherName: property.agent?.name || 'Propriétaire',
+          otherPhoto: property.agent?.image || null,
+          otherUsername: '',
+        });
+        return;
+      } catch (e) {
+        console.warn('Chat init error:', e);
+      }
+    }
+    // Mock / placeholder entity without a real owner → local fallback
     openOrCreateConversation({ id: `prop_${property.id}`, name: property.title, tag: 'property' });
     navigation.navigate('Chat', { personId: `prop_${property.id}` });
   }, [property, navigation, openOrCreateConversation]);
@@ -185,15 +195,10 @@ export default function PropertyDetailScreen({ route, navigation }) {
             <>
               <Text style={styles.sectionTitle}>Propriétaire</Text>
               <View style={styles.agentCard}>
-                {property.agent.image ? (
-                  <Image source={{ uri: property.agent.image }} style={styles.agentImg} />
-                ) : (
-                  <View style={[styles.agentImg, { backgroundColor: colors.primaryOpacity, justifyContent: 'center', alignItems: 'center' }]}>
-                    <Text style={{ fontSize: 22, color: colors.primary, fontWeight: '700' }}>
-                      {(property.agent.name || 'P').charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                )}
+                <Image
+                  source={property.agent.image ? { uri: property.agent.image } : DEFAULT_AVATAR}
+                  style={styles.agentImg}
+                />
                 <View style={styles.agentInfo}>
                   <Text style={styles.agentName}>{property.agent.name || 'Propriétaire'}</Text>
                   <Text style={styles.agentRole}>Propriétaire</Text>
@@ -233,7 +238,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const getStyles = (colors) => StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
   scroll: { paddingBottom: 100 },
 
 

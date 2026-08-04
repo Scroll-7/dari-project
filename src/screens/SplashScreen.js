@@ -74,7 +74,7 @@ export default function SplashScreen({ onFinish }) {
     }, 2800);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [lineX, logoOpacity, logoScale, onFinish, titleOpacity, titleY]);
 
   return (
     <View style={styles.container}>

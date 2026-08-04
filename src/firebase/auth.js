@@ -10,7 +10,6 @@ import {
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { initFirebase } from './config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApps } from 'firebase/app';
 
 // Ensure Firebase is initialized
 const app = initFirebase();
@@ -21,7 +20,7 @@ try {
   auth = initializeAuth(app, {
     persistence: getReactNativePersistence(AsyncStorage),
   });
-} catch (e) {
+} catch (_) {
   // initializeAuth throws if already initialized — fall back to getAuth()
   auth = getAuth(app);
 }
@@ -73,6 +72,9 @@ export const registerUser = async (email, password, fullName) => {
 export const logoutUser = async () => {
   try {
     await signOut(auth);
+    // Clear any saved "Stay signed in" credentials so they don't
+    // auto-fill on the login screen after logout
+    await AsyncStorage.removeItem('@dari_saved_creds');
     return { success: true, error: null };
   } catch (error) {
     return { success: false, error: error.message };

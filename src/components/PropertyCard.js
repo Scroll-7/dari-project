@@ -6,7 +6,6 @@ import { useNavigation } from '@react-navigation/native';
 import { getFirestore, doc, deleteDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useFavorites } from '../context/FavoritesContext';
-import { useUser } from '../context/UserContext';
 import { FONTS, SHADOWS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 
@@ -29,7 +28,6 @@ const PropertyCard = React.memo(function PropertyCard({
   const styles = getStyles(colors);
   const navigation = useNavigation();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { user } = useUser();
   const saved = isFavorite(property.id);
   const auth = getAuth();
   const isOwner = auth.currentUser?.uid && property.uid === auth.currentUser?.uid;
@@ -73,7 +71,7 @@ const PropertyCard = React.memo(function PropertyCard({
       <Pressable style={styles.modalBackdrop} onPress={() => setShowOptions(false)}>
         <Pressable style={styles.bottomSheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.sheetHandle} />
-          <Text style={styles.sheetTitle}>Options de l'annonce</Text>
+          <Text style={styles.sheetTitle}>Options de l’annonce</Text>
           
           <TouchableOpacity style={styles.sheetItem} onPress={handleEdit} activeOpacity={0.7}>
             <View style={styles.sheetIconWrap}>

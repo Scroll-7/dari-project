@@ -1,14 +1,13 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 // screens/SettingsScreen.js
 import React, { useState } from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  SafeAreaView, ScrollView, Image, Alert, Modal, Platform,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Alert, Modal, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import DEFAULT_AVATAR from '../constants/defaultAvatar';
 
 function Field({ label, value, onChange, icon, keyboardType }) {
   const { colors } = useTheme();
@@ -98,13 +97,10 @@ export default function SettingsScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.photoSection}>
           <TouchableOpacity onPress={pickImage} style={styles.photoWrap}>
-            {photo ? (
-              <Image source={{ uri: photo }} style={styles.photo} />
-            ) : (
-              <View style={styles.photoPlaceholder}>
-                <Ionicons name="person" size={40} color={colors.white} />
-              </View>
-            )}
+            <Image
+              source={photo ? { uri: photo } : DEFAULT_AVATAR}
+              style={styles.photo}
+            />
             <View style={styles.cameraBtn}>
               <Ionicons name="camera" size={14} color={colors.white} />
             </View>
@@ -220,7 +216,7 @@ export default function SettingsScreen({ navigation }) {
 }
 
 const getStyles = (colors) => StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
   title:  { fontSize: 17, fontWeight: '700', color: colors.text },
   scroll: { padding: 20 },

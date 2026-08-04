@@ -1,27 +1,30 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
-import {
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp, getDocs, where, setDoc } from 'firebase/firestore';
 
 import { useConversations } from '../context/ConversationContext';
 import { useUser } from '../context/UserContext';
 import { FONTS, SHADOWS, SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
+import DEFAULT_AVATAR from '../constants/defaultAvatar';
+import { StarRating } from '../components/StarRating';
 
+// ─── Emoji maps (same as PreferencesOnboardingScreen) ────────────────────────
+const INTEREST_EMOJI = {
+  'Lecture': '📚', 'Gaming': '🎮', 'Yoga': '🧘', 'Cuisine': '🍳',
+  'Musique': '🎵', 'Cinéma': '🎬', 'Voyages': '✈️', 'Sport': '⚽',
+  'Art': '🎨', 'Technologie': '💻', 'Jardinage': '🌱', 'Photographie': '📷',
+  'Running': '🏃', 'Natation': '🏊', 'Podcast': '🎙️', 'Randonnée': '🥾',
+};
+const HABIT_EMOJI = {
+  'Non-fumeur': '🚭', 'Fumeur': '🚬', 'Lève-tôt': '🌅', 'Noctambule': '🌙',
+  'Animaux OK': '🐾', "Pas d'animaux": '🚫', 'Calme': '🤫', 'Sociable': '🎉',
+  'Rentre tard': '🌙', 'Non-fumeur (ext.)': '🚭',
+};
 // ─── Star row ────────────────────────────────────────────────────────────────
 function Stars({ count }) {
   return (
@@ -46,11 +49,12 @@ function SectionTitle({ label }) {
 }
 
 // ─── Tag pill ────────────────────────────────────────────────────────────────
-function Tag({ text, accent = false }) {
+function Tag({ text, accent = false, emoji }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   return (
     <View style={[styles.tag, accent && styles.tagAccent]}>
+      {!!emoji && <Text style={{ fontSize: 13 }}>{emoji}</Text>}
       <Text style={[styles.tagText, accent && styles.tagTextAccent]}>{text}</Text>
     </View>
   );
@@ -88,7 +92,32 @@ export default function RoommateProfileScreen({ route }) {
       setComments(fetched);
     });
     return unsub;
-  }, [roommate.uid]);
+  }, [roommate.uid, db]);
+
+  const updateUserAverageRating = async (uid) => {
+    try {
+      const snaps = await getDocs(collection(db, 'users', uid, 'comments'));
+      let total = 0;
+      let count = 0;
+      snaps.forEach(d => {
+        const r = d.data().rating;
+        if (r) { total += r; count++; }
+      });
+      const avg = count > 0 ? (total / count) : null;
+      
+      // Update user doc
+      await setDoc(doc(db, 'users', uid), { rating: avg, reviewCount: count }, { merge: true });
+      
+      // Also update all roommatePosts by this user
+      const q = query(collection(db, 'roommatePosts'), where('uid', '==', uid));
+      const postSnaps = await getDocs(q);
+      postSnaps.forEach(async (postDoc) => {
+        await updateDoc(doc(db, 'roommatePosts', postDoc.id), { rating: avg, reviewCount: count });
+      });
+    } catch (e) {
+      console.error('Failed to update average rating', e);
+    }
+  };
 
   const handleSubmitComment = async () => {
     if (!newComment.trim()) return;
@@ -116,6 +145,7 @@ export default function RoommateProfileScreen({ route }) {
           rating: selectedRating,
           authorId: currentUser.uid,
           authorName: user?.name || user?.username || currentUser.displayName || 'Utilisateur',
+          authorImage: user?.photo || null,
           createdAt: serverTimestamp(),
         });
         
@@ -132,6 +162,9 @@ export default function RoommateProfileScreen({ route }) {
       }
       setNewComment('');
       setSelectedRating(0);
+      
+      // Update average rating asynchronously
+      updateUserAverageRating(roommate.uid);
     } catch (error) {
       console.error('Error submitting comment: ', error);
       Alert.alert('Erreur', 'Impossible de sauvegarder le commentaire.');
@@ -152,6 +185,7 @@ export default function RoommateProfileScreen({ route }) {
       { text: 'Supprimer', style: 'destructive', onPress: async () => {
           try {
             await deleteDoc(doc(db, 'users', roommate.uid, 'comments', commentId));
+            updateUserAverageRating(roommate.uid);
           } catch (error) {
             console.error('Error deleting comment: ', error);
             Alert.alert('Erreur', 'Impossible de supprimer ce commentaire.');
@@ -166,12 +200,21 @@ export default function RoommateProfileScreen({ route }) {
     colors.warning;
 
   const handleChat = () => {
-    openOrCreateConversation({
-      id: `roommate_${roommate.id}`,
-      name: roommate.name,
-      tag: 'roommate',
-    });
-    navigation.navigate('Chat', { personId: `roommate_${roommate.id}` });
+    if (roommate.isReal) {
+      navigation.navigate('Chat', {
+        otherUid: roommate.uid,
+        otherName: roommate.name,
+        otherUsername: roommate.username,
+        otherPhoto: roommate.image
+      });
+    } else {
+      openOrCreateConversation({
+        id: `roommate_${roommate.id}`,
+        name: roommate.name,
+        tag: 'roommate',
+      });
+      navigation.navigate('Chat', { personId: `roommate_${roommate.id}` });
+    }
   };
 
   return (
@@ -189,7 +232,10 @@ export default function RoommateProfileScreen({ route }) {
       >
         {/* ── Hero card ── */}
         <View style={styles.heroCard}>
-          <Image source={{ uri: roommate.image }} style={styles.heroPhoto} />
+          <Image
+            source={roommate.image ? { uri: roommate.image } : DEFAULT_AVATAR}
+            style={styles.heroPhoto}
+          />
 
           <View style={styles.heroInfo}>
             {/* Name + recommended */}
@@ -205,12 +251,35 @@ export default function RoommateProfileScreen({ route }) {
 
             <Text style={styles.heroRole}>{roommate.role}</Text>
 
+            {/* Live Average Rating */}
+            {(() => {
+              const ratedComments = comments.filter(c => c.rating > 0);
+              const count = ratedComments.length;
+              const avg = count > 0 ? (ratedComments.reduce((acc, c) => acc + c.rating, 0) / count).toFixed(1) : (roommate.rating || null);
+              if (!avg) return null;
+              return (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  <StarRating rating={Number(avg)} size={13} />
+                  <Text style={{ marginLeft: 6, color: colors.text, fontWeight: '600', fontSize: 13 }}>{avg}</Text>
+                  <Text style={{ marginLeft: 4, color: colors.textLight, fontSize: 12 }}>({count || roommate.reviewCount || 0})</Text>
+                </View>
+              );
+            })()}
+
             <View style={styles.metaRow}>
-              <Ionicons name="location-outline" size={14} color={colors.textLight} />
-              <Text style={styles.metaText}>{roommate.city}</Text>
-              <View style={styles.dot} />
-              <Ionicons name="person-outline" size={14} color={colors.textLight} />
-              <Text style={styles.metaText}>{roommate.age} ans</Text>
+              {!!roommate.city && (
+                <>
+                  <Ionicons name="location-outline" size={14} color={colors.textLight} />
+                  <Text style={styles.metaText}>{roommate.city}</Text>
+                </>
+              )}
+              {!!roommate.city && !!roommate.age && <View style={styles.dot} />}
+              {!!roommate.age && (
+                <>
+                  <Ionicons name="person-outline" size={14} color={colors.textLight} />
+                  <Text style={styles.metaText}>{roommate.age} ans</Text>
+                </>
+              )}
             </View>
 
             {/* Compatibility score */}
@@ -251,7 +320,7 @@ export default function RoommateProfileScreen({ route }) {
             <SectionTitle label="Centres d'intérêt" />
             <View style={styles.tagWrap}>
               {roommate.interests.map((t) => (
-                <Tag key={t} text={t} />
+                <Tag key={t} text={t} emoji={INTEREST_EMOJI[t]} />
               ))}
             </View>
           </View>
@@ -264,7 +333,7 @@ export default function RoommateProfileScreen({ route }) {
             <View style={styles.tagWrap}>
               {roommate.habits.map((h) => {
                 const isBad = h.includes('Noctambule') || h.includes('Fumeur');
-                return <Tag key={h} text={h} accent={!isBad} />;
+                return <Tag key={h} text={h} accent={!isBad} emoji={HABIT_EMOJI[h]} />;
               })}
             </View>
           </View>
@@ -309,7 +378,10 @@ export default function RoommateProfileScreen({ route }) {
           {comments.map((comment, idx) => (
             <View key={comment.id} style={styles.expCard}>
               <View style={styles.timelineCol}>
-                <View style={[styles.timelineDot, { backgroundColor: colors.primary }]} />
+                <Image
+                  source={comment.authorImage ? { uri: comment.authorImage } : DEFAULT_AVATAR}
+                  style={styles.commentAvatar}
+                />
                 {idx < comments.length - 1 && <View style={styles.timelineLine} />}
               </View>
               <View style={styles.expContent}>
@@ -419,7 +491,7 @@ export default function RoommateProfileScreen({ route }) {
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
 const getStyles = (colors) => StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: colors.background, paddingTop: 15 },
   scroll: { padding: SIZES.medium, paddingTop: SIZES.xxl + SIZES.small },
 
   backBtn: {
@@ -505,6 +577,7 @@ const getStyles = (colors) => StyleSheet.create({
   // Tags
   tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tag: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 12, paddingVertical: 6,
     borderRadius: SIZES.radius.pill,
     backgroundColor: colors.line,
@@ -520,10 +593,13 @@ const getStyles = (colors) => StyleSheet.create({
     gap: SIZES.medium,
     marginBottom: SIZES.medium,
   },
-  timelineCol: { alignItems: 'center', width: 16 },
+  timelineCol: { alignItems: 'center', width: 24 },
   timelineDot: {
     width: 12, height: 12, borderRadius: 6,
     marginTop: 4,
+  },
+  commentAvatar: {
+    width: 24, height: 24, borderRadius: 12,
   },
   timelineLine: {
     flex: 1, width: 2,
