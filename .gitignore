@@ -16,7 +16,8 @@ expo-env.d.ts
 # Native build outputs (regenerated via `npx expo prebuild`)
 android/
 ios/
-# dari/ is source code, not a build artifact - do NOT ignore it
+# Legacy pre-migration scaffold (app now lives at repo root)
+dari/
 
 # ─── Build artifacts ──────────────────────────────────────────────────────────
 *.apk
@@ -24,6 +25,9 @@ ios/
 *.ipa
 *.hprof
 *.keystore
+# Firebase emulator debug logs
+firebase-debug.log
+firestore-debug.log
 
 # ─── Environment & secrets ────────────────────────────────────────────────────
 .env
@@ -31,6 +35,8 @@ ios/
 !.env.example
 *.pem
 *.crt
+# Firebase service-account private keys (NEVER commit — rotate if leaked)
+*-firebase-adminsdk-*.json
 
 # ─── Logs ─────────────────────────────────────────────────────────────────────
 npm-debug.log*
